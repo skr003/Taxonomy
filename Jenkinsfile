@@ -14,7 +14,7 @@ pipeline {
         }
     stage('Deploy Agent Script to Target') {
         steps {
-            sshagent(['target-vm-ssh-key']) {
+            sshagent(['Taxonomy-vm-ssh-key']) {
                 sh '''
                     ssh -o StrictHostKeyChecking=no jenkins@target-vm "mkdir -p /opt/forensic"
                     scp -o StrictHostKeyChecking=no scripts/collect_agent.py jenkins@target-vm:/opt/forensic/collect_agent.py

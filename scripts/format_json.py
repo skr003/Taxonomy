@@ -6,21 +6,17 @@ parser.add_argument("--out", required=True)
 args = parser.parse_args()
 with open(args.infile) as f:
     data = json.load(f)
-# Convert to standardized schema
-formatted = {
-    'case_id': data.get('case_id'),
-    'items': []
-}
-for a in data.get('artifacts', []):
-    formatted['items'].append({
-        'id': a.get('name'),
-        'path': a.get('path'),
-        'type': a.get('type'),
-        'volatility': a.get('volatility'),
-        'collected_at': a.get('collected_at'),
-        'size': a.get('size'),
-    })
-os.makedirs(os.path.dirname(args.out), exist_ok=True)
+formatted = {'case_id': data.get('host'), 'collected_at': data.get('collected_at'), 'items': []}
+procs = data.get('processes') or []
+for p in procs:
+    formatted['items'].append({'id': f"proc-{p.get('pid','')}", 'type': 'process', 'name': p.get('name'), 'username': p.get('username'), 'meta': p})
+if data.get('ps_aux'):
+    formatted['items'].append({'id':'ps_aux', 'type':'log', 'entries_count': len(data['ps_aux'])})
+if data.get('net_stat'):
+    formatted['items'].append({'id':'net_stat', 'type':'network', 'entries_count': len(data['net_stat'])})
+if data.get('lsof'):
+    formatted['items'].append({'id':'lsof', 'type':'system', 'entries_count': len(data['lsof'])})
+os.makedirs(os.path.dirname(args.out) or '.', exist_ok=True)
 with open(args.out, 'w') as f:
     json.dump(formatted, f, indent=2)
 print('Wrote formatted logs to', args.out)

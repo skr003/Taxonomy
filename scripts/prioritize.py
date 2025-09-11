@@ -1,29 +1,55 @@
 #!/usr/bin/env python3
-import argparse, json
+"""
+Prioritize artifacts based on simple heuristics.
+Takes a JSON artifact dump and outputs a priority list.
+"""
+
+import argparse, json, os
+
 parser = argparse.ArgumentParser()
-parser.add_argument("--in", dest='infile', required=True)
-parser.add_argument("--out", required=True)
+parser.add_argument("--in", dest="input", required=True, help="Input artifact JSON file")
+parser.add_argument("--out", required=True, help="Output priority JSON file")
 args = parser.parse_args()
-with open(args.infile) as f:
+
+with open(args.input) as f:
     data = json.load(f)
-# Simple rules engine
-def score(a):
-    score = 0
-    if a.get('volatility') == 'volatile': score += 50
-    if a.get('type') == 'memory': score += 30
-    if 'auth' in a.get('name',''): score += 20
-    # smaller size -> quicker to analyze
-    score += max(0, 10 - (a.get('size',0)//10000))
-    return score
-for a in data.get('artifacts', []):
-    a['priority_score'] = score(a)
-    if a['priority_score'] >= 60:
-        a['priority'] = 'high'
-    elif a['priority_score'] >= 30:
-        a['priority'] = 'medium'
-    else:
-        a['priority'] = 'low'
-out = { 'case_id': data.get('case_id'), 'prioritized': data.get('artifacts') }
-with open(args.out, 'w') as f:
+
+prioritized = []
+
+# Heuristic 1: processes with suspicious names
+suspicious_names = ["nc", "netcat", "socat", "nmap", "bash", "sh"]
+
+for proc in data.get("processes", []):
+    name = proc.get("name", "").lower()
+    if any(s in name for s in suspicious_names):
+        prioritized.append({
+            "type": "process",
+            "pid": proc.get("pid"),
+            "name": proc.get("name"),
+            "reason": "Suspicious process name",
+            "score": 9
+        })
+
+# Heuristic 2: network connections with foreign addresses
+for conn in data.get("connections", []):
+    if conn.get("raddr"):
+        prioritized.append({
+            "type": "connection",
+            "pid": conn.get("pid"),
+            "laddr": conn.get("laddr"),
+            "raddr": conn.get("raddr"),
+            "status": conn.get("status"),
+            "reason": "Active remote connection",
+            "score": 7
+        })
+
+# Always write out valid JSON structure
+out = {
+    "prioritized": prioritized or []
+}
+
+os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
+with open(args.out, "w") as f:
     json.dump(out, f, indent=2)
-print('Wrote priority list to', args.out)
+
+print(f"Wrote priority list to {args.out}, {len(prioritized)} items")

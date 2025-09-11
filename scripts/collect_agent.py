@@ -1,100 +1,122 @@
 #!/usr/bin/env python3
 """
-Forensic agent: collects live system data and writes artifacts JSON to --out path.
+Forensic agent: collects live system data and evidence files.
+Outputs a single JSON file (--out).
 """
-import argparse, json, os, time, platform, socket, getpass, subprocess
+
+import argparse, json, os, time, platform, getpass, subprocess, base64, uuid
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--out", required=True, help="Output artifact JSON path")
 args = parser.parse_args()
 
-def try_psutil_collection():
+def safe_read_file(path, binary=False, limit=20000):
+    """Read a file safely (truncate and base64 if binary)."""
     try:
-        import psutil
-    except Exception:
-        return None
-
-    data = {}
-    data['host'] = platform.node()
-    data['timestamp'] = time.time()
-    data['user'] = getpass.getuser()
-    data['os'] = platform.platform()
-
-    # Processes
-    procs = []
-    for p in psutil.process_iter(['pid','name','username','create_time']):
-        procs.append(p.info)
-    data['processes'] = procs
-
-    # Network connections
-    try:
-        conns = []
-        for c in psutil.net_connections(kind='inet'):
-            conns.append({
-                'fd': c.fd,
-                'family': str(c.family),
-                'type': str(c.type),
-                'laddr': str(c.laddr),
-                'raddr': str(c.raddr),
-                'status': c.status,
-                'pid': c.pid
-            })
-        data['connections'] = conns
-    except Exception:
-        data['connections'] = []
-
-    # Memory
-    try:
-        vm = psutil.virtual_memory()._asdict()
-        data['memory'] = vm
-    except Exception:
-        data['memory'] = {}
-
-    return data
-
-def fallback_shell_collection():
-    data = {}
-    data['host'] = platform.node()
-    data['timestamp'] = time.time()
-    data['user'] = getpass.getuser()
-    data['os'] = platform.platform()
-
-    # ps
-    try:
-        p = subprocess.run(['ps', 'aux'], capture_output=True, text=True, timeout=10)
-        data['ps_aux'] = p.stdout.splitlines()
+        mode = "rb" if binary else "r"
+        with open(path, mode) as f:
+            data = f.read(limit)
+        if binary:
+            return base64.b64encode(data).decode("utf-8")
+        else:
+            return data
     except Exception as e:
-        data['ps_aux_error'] = str(e)
+        return f"ERROR: {e}"
 
-    # netstat / ss
+def run_cmd(cmd, limit=20000):
     try:
-        p = subprocess.run(['ss', '-tunap'], capture_output=True, text=True, timeout=10)
-        data['net_stat'] = p.stdout.splitlines()
-    except Exception:
-        try:
-            p = subprocess.run(['netstat', '-tunap'], capture_output=True, text=True, timeout=10)
-            data['net_stat'] = p.stdout.splitlines()
-        except Exception as e:
-            data['net_stat_error'] = str(e)
-
-    # lsof
-    try:
-        p = subprocess.run(['lsof', '-nP'], capture_output=True, text=True, timeout=15)
-        data['lsof'] = p.stdout.splitlines()[:500]
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        return p.stdout[:limit]
     except Exception as e:
-        data['lsof_error'] = str(e)
+        return f"ERROR: {e}"
 
-    return data
+artifacts = {
+    "case_id": str(uuid.uuid4()),
+    "host": platform.node(),
+    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "user": getpass.getuser(),
+    "os": platform.platform(),
+    "logs": {},
+    "user_activity": {},
+    "network": {},
+    "config": {},
+    "processes": {},
+    "filesystem": {},
+    "packages": {},
+    "temp_files": {},
+}
 
-data = try_psutil_collection()
-if data is None:
-    data = fallback_shell_collection()
+# 1. System Logs
+log_files = [
+    "/var/log/auth.log", "/var/log/secure", "/var/log/syslog",
+    "/var/log/messages", "/var/log/dmesg", "/var/log/kern.log", "/var/log/faillog"
+]
+for lf in log_files:
+    artifacts["logs"][lf] = safe_read_file(lf)
 
-# Metadata
-data['collected_at'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-os.makedirs(os.path.dirname(args.out) or '.', exist_ok=True)
+# 2. User Activity
+user_activity_files = [
+    "/var/log/lastlog", "/var/run/utmp", "/var/log/wtmp",
+    "/var/log/btmp"
+]
+for uf in user_activity_files:
+    artifacts["user_activity"][uf] = safe_read_file(uf, binary=True)
 
-with open(args.out, 'w') as f:
-    json.dump(data, f, indent=2)
+# Bash history per user
+try:
+    for u in os.listdir("/home"):
+        hist_path = os.path.join("/home", u, ".bash_history")
+        if os.path.exists(hist_path):
+            artifacts["user_activity"][f"{u}_bash_history"] = safe_read_file(hist_path)
+except Exception as e:
+    artifacts["user_activity"]["error"] = str(e)
 
-print('Wrote artifacts to', args.out)
+# 3. Network
+artifacts["network"]["/etc/hosts"] = safe_read_file("/etc/hosts")
+artifacts["network"]["/etc/hostname"] = safe_read_file("/etc/hostname")
+artifacts["network"]["/etc/resolv.conf"] = safe_read_file("/etc/resolv.conf")
+artifacts["network"]["/etc/ssh"] = run_cmd(["ls", "-la", "/etc/ssh"])
+artifacts["network"]["/proc/net/tcp"] = safe_read_file("/proc/net/tcp")
+artifacts["network"]["/proc/net/udp"] = safe_read_file("/proc/net/udp")
+
+# 4. System/User Config
+config_files = ["/etc/passwd", "/etc/shadow", "/etc/group", "/etc/sudoers"]
+for cf in config_files:
+    artifacts["config"][cf] = safe_read_file(cf)
+
+# 5. Application/Service Configs
+artifacts["config"]["/etc/crontab"] = safe_read_file("/etc/crontab")
+artifacts["config"]["/var/spool/cron"] = run_cmd(["ls", "-la", "/var/spool/cron"])
+artifacts["config"]["systemd_units"] = run_cmd(["systemctl", "list-units", "--no-pager"])
+
+# 6. Processes and Memory
+artifacts["processes"]["ps_aux"] = run_cmd(["ps", "aux"])
+artifacts["processes"]["/proc/meminfo"] = safe_read_file("/proc/meminfo")
+artifacts["processes"]["/proc/cpuinfo"] = safe_read_file("/proc/cpuinfo")
+
+# 7. Filesystem
+fs_paths = ["/lost+found", "/media", "/mnt"]
+for p in fs_paths:
+    artifacts["filesystem"][p] = run_cmd(["ls", "-la", p])
+artifacts["filesystem"]["/etc/fstab"] = safe_read_file("/etc/fstab")
+
+# 8. Packages
+if os.path.exists("/var/lib/dpkg"):
+    artifacts["packages"]["dpkg_list"] = run_cmd(["dpkg", "-l"])
+    artifacts["packages"]["sources_list"] = safe_read_file("/etc/apt/sources.list")
+    artifacts["packages"]["history_log"] = safe_read_file("/var/log/apt/history.log")
+elif os.path.exists("/var/lib/rpm"):
+    artifacts["packages"]["rpm_list"] = run_cmd(["rpm", "-qa"])
+    artifacts["packages"]["yum_log"] = safe_read_file("/var/log/yum.log")
+
+# 9. Temp files
+artifacts["temp_files"]["/tmp"] = run_cmd(["ls", "-la", "/tmp"])
+artifacts["temp_files"]["/var/tmp"] = run_cmd(["ls", "-la", "/var/tmp"])
+artifacts["temp_files"]["/dev/shm"] = run_cmd(["ls", "-la", "/dev/shm"])
+
+# Save
+os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
+with open(args.out, "w") as f:
+    json.dump(artifacts, f, indent=2)
+
+print(f"Wrote artifacts to {args.out} with case_id {artifacts['case_id']}")

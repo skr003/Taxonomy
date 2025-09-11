@@ -29,7 +29,8 @@ pipeline {
             steps {
                 echo 'Formatting logs to standardized JSON...'
                 sh 'python3 scripts/format_json.py --in ${WORKSPACE_DIR}/artifacts.json --out ${WORKSPACE_DIR}/formatted_logs.json'
-            }
+                sh 'ls -l ${WORKSPACE_DIR} || true'
+                archiveArtifacts artifacts: 'forensic_workspace/**', fingerprint: true
         }
         stage('Store Metadata') {
             steps {

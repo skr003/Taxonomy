@@ -12,7 +12,17 @@ pipeline {
                 sh 'python3 scripts/initialize.py --workspace ${WORKSPACE_DIR}'
             }
         }
-
+    stage('Deploy Agent Script to Target') {
+        steps {
+            sshagent(['target-vm-ssh-key']) {
+                sh '''
+                    ssh -o StrictHostKeyChecking=no jenkins@target-vm "mkdir -p /opt/forensic"
+                    scp -o StrictHostKeyChecking=no scripts/collect_agent.py jenkins@target-vm:/opt/forensic/collect_agent.py
+                    ssh -o StrictHostKeyChecking=no jenkins@target-vm "chmod +x /opt/forensic/collect_agent.py"
+                '''
+            }
+        }
+    }   
         stage('Collect Artifacts on Target') {
             agent { label 'target-vm' }   // This runs directly on the Target VM
             steps {

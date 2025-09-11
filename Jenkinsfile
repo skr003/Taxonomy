@@ -1,8 +1,14 @@
 pipeline {
     agent any
+    parameters {
+         string(name: 'TARGET_IP', defaultValue: '172.16.0.5', description: 'Target VM IP address')
+         string(name: 'SSH_CRED_ID', defaultValue: 'target-vm-ssh-key', description: 'Jenkins credential ID for SSH key')
+      }
     environment {
         WORKSPACE_DIR = "${env.WORKSPACE}/forensic_workspace"
         DB_PATH = "${env.WORKSPACE}/forensic_workspace/metadata.db"
+        TARGET_IP   = "${params.TARGET_IP}"
+        SSH_CRED_ID = "${params.SSH_CRED_ID}"
     }
     stages {
         stage('Initialize') {

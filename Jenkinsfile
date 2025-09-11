@@ -2,7 +2,7 @@ pipeline {
     agent any
     parameters {
          string(name: 'TARGET_IP', defaultValue: '172.16.0.5', description: 'Target VM IP address')
-         string(name: 'SSH_CRED_ID', defaultValue: 'target-vm-ssh-key', description: 'Jenkins credential ID for SSH key')
+         string(name: 'SSH_CRED_ID', defaultValue: 'Taxonomy-vm-ssh-key', description: 'Jenkins credential ID for SSH key')
       }
     environment {
         WORKSPACE_DIR = "${env.WORKSPACE}/forensic_workspace"

@@ -1,122 +1,204 @@
 #!/usr/bin/env python3
 """
-Forensic agent: collects live system data and evidence files.
-Outputs a single JSON file (--out).
+Forensic Collection Agent
+Collects system logs, user activity, network info, configuration, processes, and more.
+Adds fallback messages with timestamps when no evidence is found.
 """
 
-import argparse, json, os, time, platform, getpass, subprocess, base64, uuid
+import argparse, json, os, subprocess, pwd, time
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--out", required=True, help="Output artifact JSON path")
+parser.add_argument("--out", required=True, help="Output JSON file")
 args = parser.parse_args()
 
-def safe_read_file(path, binary=False, limit=20000):
-    """Read a file safely (truncate and base64 if binary)."""
-    try:
-        mode = "rb" if binary else "r"
-        with open(path, mode) as f:
-            data = f.read(limit)
-        if binary:
-            return base64.b64encode(data).decode("utf-8")
-        else:
-            return data
-    except Exception as e:
-        return f"ERROR: {e}"
-
-def run_cmd(cmd, limit=20000):
-    try:
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-        return p.stdout[:limit]
-    except Exception as e:
-        return f"ERROR: {e}"
+timestamp = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
 
 artifacts = {
-    "case_id": str(uuid.uuid4()),
-    "host": platform.node(),
-    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    "user": getpass.getuser(),
-    "os": platform.platform(),
-    "logs": {},
+    "timestamp": timestamp,
+    "system_logs": {},
     "user_activity": {},
     "network": {},
     "config": {},
     "processes": {},
     "filesystem": {},
     "packages": {},
-    "temp_files": {},
+    "other": {}
 }
 
-# 1. System Logs
-log_files = [
-    "/var/log/auth.log", "/var/log/secure", "/var/log/syslog",
-    "/var/log/messages", "/var/log/dmesg", "/var/log/kern.log", "/var/log/faillog"
+def safe_read(path, binary=False):
+    """Read a file safely as text or binary hex"""
+    try:
+        mode = "rb" if binary else "r"
+        with open(path, mode) as f:
+            return f.read() if not binary else f.read().hex()
+    except Exception:
+        return None
+
+def run_cmd(cmd):
+    """Run a shell command and capture output"""
+    try:
+        out = subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.STDOUT)
+        return out.strip()
+    except subprocess.CalledProcessError:
+        return None
+
+def add_message(category, key, message):
+    """Add a fallback message with timestamp"""
+    artifacts[category][key] = {
+        "message": f"{message} at {timestamp}"
+    }
+
+# --------------------------
+# 1. System Logs & Events
+# --------------------------
+log_paths = [
+    "/var/log/auth.log", "/var/log/secure",
+    "/var/log/syslog", "/var/log/messages",
+    "/var/log/dmesg", "/var/log/kern.log",
+    "/var/log/faillog"
 ]
-for lf in log_files:
-    artifacts["logs"][lf] = safe_read_file(lf)
+for lp in log_paths:
+    content = safe_read(lp, binary=lp.endswith("faillog"))
+    if content:
+        artifacts["system_logs"][lp] = content
+    else:
+        add_message("system_logs", lp, "No log data available")
 
-# 2. User Activity
-user_activity_files = [
-    "/var/log/lastlog", "/var/run/utmp", "/var/log/wtmp",
-    "/var/log/btmp"
-]
-for uf in user_activity_files:
-    artifacts["user_activity"][uf] = safe_read_file(uf, binary=True)
+# --------------------------
+# 2. User Activity & Commands
+# --------------------------
+artifacts["user_activity"]["bash_history"] = {}
+for u in pwd.getpwall():
+    hist_file = os.path.join(u.pw_dir, ".bash_history")
+    content = safe_read(hist_file)
+    if content:
+        artifacts["user_activity"]["bash_history"][u.pw_name] = content
+    else:
+        artifacts["user_activity"]["bash_history"][u.pw_name] = f"No history found at {timestamp}"
 
-# Bash history per user
-try:
-    for u in os.listdir("/home"):
-        hist_path = os.path.join("/home", u, ".bash_history")
-        if os.path.exists(hist_path):
-            artifacts["user_activity"][f"{u}_bash_history"] = safe_read_file(hist_path)
-except Exception as e:
-    artifacts["user_activity"]["error"] = str(e)
+special_logs = ["/var/log/lastlog", "/var/run/utmp", "/var/log/wtmp", "/var/log/btmp"]
+for sp in special_logs:
+    content = safe_read(sp, binary=True)
+    if content:
+        artifacts["user_activity"][sp] = content
+    else:
+        add_message("user_activity", sp, "No user activity recorded")
 
-# 3. Network
-artifacts["network"]["/etc/hosts"] = safe_read_file("/etc/hosts")
-artifacts["network"]["/etc/hostname"] = safe_read_file("/etc/hostname")
-artifacts["network"]["/etc/resolv.conf"] = safe_read_file("/etc/resolv.conf")
-artifacts["network"]["/etc/ssh"] = run_cmd(["ls", "-la", "/etc/ssh"])
-artifacts["network"]["/proc/net/tcp"] = safe_read_file("/proc/net/tcp")
-artifacts["network"]["/proc/net/udp"] = safe_read_file("/proc/net/udp")
+if os.path.exists("/home"):
+    artifacts["user_activity"]["home_dirs"] = os.listdir("/home")
+else:
+    artifacts["user_activity"]["home_dirs"] = f"No /home directory found at {timestamp}"
 
-# 4. System/User Config
-config_files = ["/etc/passwd", "/etc/shadow", "/etc/group", "/etc/sudoers"]
-for cf in config_files:
-    artifacts["config"][cf] = safe_read_file(cf)
+# --------------------------
+# 3. Network Connections & Config
+# --------------------------
+net_files = ["/etc/hosts", "/etc/hostname", "/etc/resolv.conf"]
+for nf in net_files:
+    content = safe_read(nf)
+    if content:
+        artifacts["network"][nf] = content
+    else:
+        add_message("network", nf, "No network config found")
 
-# 5. Application/Service Configs
-artifacts["config"]["/etc/crontab"] = safe_read_file("/etc/crontab")
-artifacts["config"]["/var/spool/cron"] = run_cmd(["ls", "-la", "/var/spool/cron"])
-artifacts["config"]["systemd_units"] = run_cmd(["systemctl", "list-units", "--no-pager"])
+if os.path.exists("/etc/ssh"):
+    artifacts["network"]["/etc/ssh"] = os.listdir("/etc/ssh")
+else:
+    artifacts["network"]["/etc/ssh"] = f"No SSH config directory found at {timestamp}"
 
-# 6. Processes and Memory
-artifacts["processes"]["ps_aux"] = run_cmd(["ps", "aux"])
-artifacts["processes"]["/proc/meminfo"] = safe_read_file("/proc/meminfo")
-artifacts["processes"]["/proc/cpuinfo"] = safe_read_file("/proc/cpuinfo")
+for f in ["tcp", "udp"]:
+    path = f"/proc/net/{f}"
+    content = safe_read(path)
+    if content:
+        artifacts["network"].setdefault("proc_net", {})[f] = content
+    else:
+        add_message("network", f"/proc/net/{f}", "No data found")
 
-# 7. Filesystem
-fs_paths = ["/lost+found", "/media", "/mnt"]
-for p in fs_paths:
-    artifacts["filesystem"][p] = run_cmd(["ls", "-la", p])
-artifacts["filesystem"]["/etc/fstab"] = safe_read_file("/etc/fstab")
+netstat = run_cmd("ss -tulpn || netstat -tulpn")
+if netstat:
+    artifacts["network"]["netstat"] = netstat
+else:
+    add_message("network", "netstat", "No active network connections found")
 
-# 8. Packages
-if os.path.exists("/var/lib/dpkg"):
-    artifacts["packages"]["dpkg_list"] = run_cmd(["dpkg", "-l"])
-    artifacts["packages"]["sources_list"] = safe_read_file("/etc/apt/sources.list")
-    artifacts["packages"]["history_log"] = safe_read_file("/var/log/apt/history.log")
-elif os.path.exists("/var/lib/rpm"):
-    artifacts["packages"]["rpm_list"] = run_cmd(["rpm", "-qa"])
-    artifacts["packages"]["yum_log"] = safe_read_file("/var/log/yum.log")
+# --------------------------
+# 4. System & User Config
+# --------------------------
+for cfg in ["/etc/passwd", "/etc/shadow", "/etc/group", "/etc/sudoers"]:
+    content = safe_read(cfg)
+    if content:
+        artifacts["config"][cfg] = content
+    else:
+        add_message("config", cfg, "File not accessible or missing")
 
-# 9. Temp files
-artifacts["temp_files"]["/tmp"] = run_cmd(["ls", "-la", "/tmp"])
-artifacts["temp_files"]["/var/tmp"] = run_cmd(["ls", "-la", "/var/tmp"])
-artifacts["temp_files"]["/dev/shm"] = run_cmd(["ls", "-la", "/dev/shm"])
+# --------------------------
+# 5. Application & Service Config
+# --------------------------
+for svc in ["/etc/crontab", "/var/spool/cron", "/etc/systemd", "/usr/lib/systemd"]:
+    if os.path.isdir(svc):
+        artifacts["config"][svc] = os.listdir(svc)
+    elif os.path.isfile(svc):
+        artifacts["config"][svc] = safe_read(svc)
+    else:
+        add_message("config", svc, "Not present on system")
 
-# Save
+# --------------------------
+# 6. Processes & Memory
+# --------------------------
+ps_output = run_cmd("ps aux")
+artifacts["processes"]["ps_aux"] = ps_output or f"No running processes captured at {timestamp}"
+artifacts["processes"]["proc_meminfo"] = safe_read("/proc/meminfo") or f"No memory info at {timestamp}"
+artifacts["processes"]["proc_cpuinfo"] = safe_read("/proc/cpuinfo") or f"No CPU info at {timestamp}"
+artifacts["processes"]["dev_shm"] = os.listdir("/dev/shm") if os.path.exists("/dev/shm") else f"No /dev/shm at {timestamp}"
+
+# --------------------------
+# 7. Files & Directories Metadata
+# --------------------------
+for p in ["/lost+found", "/media", "/mnt"]:
+    if os.path.exists(p):
+        artifacts["filesystem"][p] = os.listdir(p)
+    else:
+        add_message("filesystem", p, "Directory not found")
+
+# --------------------------
+# 8. Package Management & Installed Software
+# --------------------------
+dpkg_list = run_cmd("dpkg -l") if os.path.exists("/var/lib/dpkg") else None
+rpm_list = run_cmd("rpm -qa") if os.path.exists("/var/lib/rpm") else None
+artifacts["packages"]["dpkg_list"] = dpkg_list or f"No dpkg data at {timestamp}"
+artifacts["packages"]["rpm_list"] = rpm_list or f"No rpm data at {timestamp}"
+artifacts["packages"]["sources_list"] = safe_read("/etc/apt/sources.list") or f"No sources.list at {timestamp}"
+artifacts["packages"]["apt_history"] = safe_read("/var/log/apt/history.log") or f"No apt history at {timestamp}"
+artifacts["packages"]["yum_history"] = safe_read("/var/log/yum.log") or f"No yum history at {timestamp}"
+
+# --------------------------
+# 9. Other Evidence Paths
+# --------------------------
+for tmpdir in ["/tmp", "/var/tmp"]:
+    if os.path.exists(tmpdir):
+        artifacts["other"][tmpdir] = os.listdir(tmpdir)
+    else:
+        add_message("other", tmpdir, "Directory not found")
+
+# --------------------------
+# Explicit: Failed Login Attempts
+# --------------------------
+faillog_output = run_cmd("faillog -a")
+lastb_output = run_cmd("lastb -n 20")
+
+if faillog_output:
+    artifacts["system_logs"]["failed_logins"] = {"faillog": faillog_output}
+else:
+    artifacts["system_logs"]["failed_logins"] = {"message": f"No failed login attempts since {timestamp}"}
+
+if lastb_output:
+    artifacts["system_logs"]["failed_logins"]["lastb"] = lastb_output
+else:
+    artifacts["system_logs"]["failed_logins"]["lastb"] = f"No failed login attempts since {timestamp}"
+
+# --------------------------
+# Save everything
+# --------------------------
 os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
 with open(args.out, "w") as f:
     json.dump(artifacts, f, indent=2)
 
-print(f"Wrote artifacts to {args.out} with case_id {artifacts['case_id']}")
+print(f"[+] Forensic collection completed. Artifacts saved to {args.out}")

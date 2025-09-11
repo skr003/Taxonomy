@@ -12,17 +12,19 @@ pipeline {
                 sh 'python3 scripts/initialize.py --workspace ${WORKSPACE_DIR}'
             }
         }
-    stage('Deploy Agent Script to Target') {
+    stage('Run Agent on Target (collect live data)') {
         steps {
-            sshagent(['Taxonomy-vm-ssh-key']) {
+            withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CRED_ID}", keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                 sh '''
-                    ssh -o StrictHostKeyChecking=no jenkins@target-vm "mkdir -p /opt/forensic"
-                    scp -o StrictHostKeyChecking=no scripts/collect_agent.py jenkins@target-vm:/opt/forensic/collect_agent.py
-                    ssh -o StrictHostKeyChecking=no jenkins@target-vm "chmod +x /opt/forensic/collect_agent.py"
+                    echo "Running agent remotely..."
+                    ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@${TARGET_IP} "python3 /home/$SSH_USER/forensic/collect_agent.py --out /tmp/artifacts.json"
+                    echo "Copying artifacts back to controller workspace..."
+                    scp -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@${TARGET_IP}:/tmp/artifacts.json ${WORKSPACE_DIR}/artifacts.json
                 '''
             }
         }
-    }   
+    }
+  
         stage('Collect Artifacts on Target') {
             agent { label 'target-vm' }   // This runs directly on the Target VM
             steps {

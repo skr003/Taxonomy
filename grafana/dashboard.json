@@ -1,0 +1,17 @@
+{
+  "dashboard": {
+    "title": "Forensic Pipeline Overview (Stub)",
+    "panels": [
+      {
+        "type": "text",
+        "title": "Summary",
+        "content": "This is a stub dashboard. Replace panels with Loki/Prometheus queries."
+      },
+      {
+        "type": "stat",
+        "title": "Artifacts Count",
+        "query": "placeholder"
+      }
+    ]
+  }
+}

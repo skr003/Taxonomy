@@ -74,39 +74,39 @@ pipeline {
       }
     }
 
-    stage('Upload Reports to Azure Storage') {
-      steps {
-            script {
-            withCredentials([
-                string(credentialsId: 'TAXONOMY_STORAGE_ACCOUNT_KEY', variable: 'TAXONOMY_STORAGE_ACCOUNT_KEY')
-                    ]) {
-                sh '''
-                # Set variables - REPLACE WITH YOUR ACTUAL STORAGE KEY
-                STORAGE_ACCOUNT="taxonomystorage123"
-                CONTAINER="reports"
+    // stage('Upload Reports to Azure Storage') {
+    //   steps {
+    //         script {
+    //         withCredentials([
+    //             string(credentialsId: 'TAXONOMY_STORAGE_ACCOUNT_KEY', variable: 'TAXONOMY_STORAGE_ACCOUNT_KEY')
+    //                 ]) {
+    //             sh '''
+    //             # Set variables - REPLACE WITH YOUR ACTUAL STORAGE KEY
+    //             STORAGE_ACCOUNT="taxonomystorage123"
+    //             CONTAINER="reports"
 
-                for f in forensic_workspace/*.json; do
-                    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "builds/$BUILD_NUMBER/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-                    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "latest/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite                    
-                done
+    //             for f in forensic_workspace/*.json; do
+    //                 az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "builds/$BUILD_NUMBER/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
+    //                 az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "latest/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite                    
+    //             done
           
-                # Upload to build-specific path
-                #az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/$fname" --file "$f"--account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-                #az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/formatted_logs.json" --file forensic_workspace/formatted_logs.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
+    //             # Upload to build-specific path
+    //             #az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/$fname" --file "$f"--account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
+    //             #az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/formatted_logs.json" --file forensic_workspace/formatted_logs.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
 
-                # Upload to 'latest' path
-                #az storage blob upload --container-name $CONTAINER --name "latest/$fname" --file "$f" --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-                #az storage blob upload --container-name $CONTAINER --name "latest/formatted_logs.json" --file forensic_workspace/formatted_logs.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-                '''
-            }  
-      }
-    }        
-    }
+    //             # Upload to 'latest' path
+    //             #az storage blob upload --container-name $CONTAINER --name "latest/$fname" --file "$f" --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
+    //             #az storage blob upload --container-name $CONTAINER --name "latest/formatted_logs.json" --file forensic_workspace/formatted_logs.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
+    //             '''
+    //         }  
+    //   }
+    // }        
+    // }
     
-    stage('Export Mindmap') {
-      steps {
-        sh 'python3 scripts/mindmap_export.py --in ${WORKSPACE_DIR}/formatted_logs.json --out ${WORKSPACE_DIR}/mindmap.json'
-      }
-    }
+    // stage('Export Mindmap') {
+    //   steps {
+    //     sh 'python3 scripts/mindmap_export.py --in ${WORKSPACE_DIR}/formatted_logs.json --out ${WORKSPACE_DIR}/mindmap.json'
+    //   }
+    // }
   }
 }

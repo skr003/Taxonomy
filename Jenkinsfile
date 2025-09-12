@@ -84,8 +84,8 @@ pipeline {
                 CONTAINER="reports"
 
                 for f in forensic_workspace/*.json; do
-                    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $STORAGE_CONTAINER --file "$f" --name "builds/$BUILD_NUMBER/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-                    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $STORAGE_CONTAINER --file "$f" --name "latest/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite                    
+                    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "builds/$BUILD_NUMBER/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
+                    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "latest/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite                    
                 done
           
                 # Upload to build-specific path

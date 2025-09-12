@@ -108,3 +108,5 @@ pipeline {
         sh 'python3 scripts/mindmap_export.py --in ${WORKSPACE_DIR}/formatted_logs.json --out ${WORKSPACE_DIR}/mindmap.json'
       }
     }
+  }
+}

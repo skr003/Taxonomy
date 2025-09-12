@@ -86,10 +86,14 @@ pipeline {
                 STORAGE_ACCOUNT="taxonomystorage123"
                 CONTAINER="reports"
 
-                for f in forensic_workspace/*.json; do
-                    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "builds/$BUILD_NUMBER/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-                    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "latest/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite                    
-                done
+                az storage blob upload-batch --account-name $AZURE_STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "builds/$BUILD_NUMBER" --source forensic_workspace
+                az storage blob upload-batch --account-name $AZURE_STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "latest" --source forensic_workspace
+
+
+                #for f in forensic_workspace/*.json; do
+                #    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "builds/$BUILD_NUMBER/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
+                #    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "latest/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite                    
+                #done
           
                 # Upload to build-specific path
                 #az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/$fname" --file "$f"--account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite

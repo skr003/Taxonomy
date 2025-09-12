@@ -3,10 +3,11 @@ import json
 import os
 from datetime import datetime
 
-# Input inside forensic_workspace
+# Base forensic directory
 WORKSPACE_DIR = os.getcwd()
-INPUT_FILE = os.path.join(WORKSPACE_DIR, "forensic_workspace", "artifacts.json")
-OUTPUT_FILE = os.path.join(WORKSPACE_DIR, "formatted_logs.json")
+FORENSIC_DIR = os.path.join(WORKSPACE_DIR, "forensic_workspace")
+INPUT_FILE = os.path.join(FORENSIC_DIR, "artifacts.json")
+OUTPUT_FILE = os.path.join(FORENSIC_DIR, "formatted_logs.json")
 
 def load_artifacts():
     print(f"[INFO] Looking for input file at: {INPUT_FILE}")

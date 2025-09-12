@@ -5,7 +5,7 @@ Collects system logs, user activity, network info, configuration, processes, and
 Adds fallback messages with timestamps when no evidence is found.
 """
 
-import argparse, json, os, subprocess, pwd, time
+import argparse, json, os, subprocess, pwd, time, re
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--out", required=True, help="Output JSON file")
@@ -193,6 +193,48 @@ if lastb_output:
     artifacts["system_logs"]["failed_logins"]["lastb"] = lastb_output
 else:
     artifacts["system_logs"]["failed_logins"]["lastb"] = f"No failed login attempts since {timestamp}"
+
+
+
+import re
+
+failed_attempts = []
+try:
+    with open("/var/log/auth.log", "r") as f:
+        for line in f:
+            if "Failed password" in line or "Invalid user" in line:
+                parts = line.split()
+                timestamp = " ".join(parts[0:3])
+                user = None
+                ip = None
+                # crude parse
+                if "from" in parts:
+                    idx = parts.index("from")
+                    ip = parts[idx+1]
+                if "user" in parts:
+                    idx = parts.index("user")
+                    user = parts[idx+1]
+
+                failed_attempts.append({
+                    "timestamp": timestamp,
+                    "username": user,
+                    "source_ip": ip,
+                    "status": "Failed",
+                    "message": line.strip()
+                })
+except FileNotFoundError:
+    failed_attempts.append({
+        "timestamp": None,
+        "username": None,
+        "source_ip": None,
+        "status": "Info",
+        "message": "No auth.log file found"
+    })
+
+artifacts["failed_ssh"] = failed_attempts
+
+
+
 
 # --------------------------
 # Save everything

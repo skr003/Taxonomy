@@ -69,6 +69,8 @@ pipeline {
     stage('Store Metadata') {
       steps {
         sh 'python3 scripts/store_metadata.py --db ${DB_PATH} --meta ${WORKSPACE_DIR}/priority_list.json'
+        archiveArtifacts artifacts: 'forensic_workspace/**', fingerprint: true
+
       }
     }
 
@@ -106,12 +108,3 @@ pipeline {
         sh 'python3 scripts/mindmap_export.py --in ${WORKSPACE_DIR}/formatted_logs.json --out ${WORKSPACE_DIR}/mindmap.json'
       }
     }
-
-    stage('Notify & Archive') {
-      steps {
-        echo 'Archiving artifacts...'
-        archiveArtifacts artifacts: 'forensic_workspace/**', fingerprint: true
-      }
-    }
-  }
-}

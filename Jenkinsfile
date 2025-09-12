@@ -84,15 +84,16 @@ pipeline {
                 CONTAINER="reports"
 
                 for f in forensic_workspace/*.json; do
-                    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $STORAGE_CONTAINER --file "$f" --name "$(basename $f)" --auth-mode login
+                    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $STORAGE_CONTAINER --file "$f" --name "builds/$BUILD_NUMBER/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
+                    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $STORAGE_CONTAINER --file "$f" --name "latest/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite                    
                 done
           
                 # Upload to build-specific path
-                az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/$fname" --file "$f"--account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
+                #az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/$fname" --file "$f"--account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
                 #az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/formatted_logs.json" --file forensic_workspace/formatted_logs.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
 
                 # Upload to 'latest' path
-                az storage blob upload --container-name $CONTAINER --name "latest/$fname" --file "$f" --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
+                #az storage blob upload --container-name $CONTAINER --name "latest/$fname" --file "$f" --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
                 #az storage blob upload --container-name $CONTAINER --name "latest/formatted_logs.json" --file forensic_workspace/formatted_logs.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
                 '''
             }  

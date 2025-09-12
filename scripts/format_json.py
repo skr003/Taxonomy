@@ -3,73 +3,68 @@ import json
 import os
 from datetime import datetime
 
-INPUT_FILE = "forensic_workspace/artifacts.json"
-OUTPUT_DIR = "forensic_workspace"
-
-CATEGORY_FILES = {
-    "system_logs": "system_logs.json",
-    "user_activity": "user_activity.json",
-    "network": "network.json",
-    "system_config": "system_config.json",
-    "application_config": "application_config.json",
-    "processes_memory": "processes_memory.json",
-    "files_metadata": "files_metadata.json",
-    "packages": "packages.json",
-    "other_evidence": "other_evidence.json"
-}
+# Base forensic directory
+WORKSPACE_DIR = os.getcwd()
+FORENSIC_DIR = os.path.join(WORKSPACE_DIR, "forensic_workspace")
+INPUT_FILE = os.path.join(FORENSIC_DIR, "artifacts.json")
+OUTPUT_FILE = os.path.join(FORENSIC_DIR, "formatted_logs.json")
 
 def load_artifacts():
+    print(f"[INFO] Looking for input file at: {INPUT_FILE}")
     if not os.path.exists(INPUT_FILE):
-        raise FileNotFoundError(f"{INPUT_FILE} not found. Run collect_agent.py first.")
+        print(f"[ERROR] {INPUT_FILE} not found. Did collect_agent.py run successfully?")
+        return None
     with open(INPUT_FILE, "r") as f:
-        return json.load(f)
+        try:
+            return json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"[ERROR] Failed to parse JSON: {e}")
+            return None
 
-def save_json(data, filename):
-    with open(filename, "w") as f:
-        json.dump(data, f, indent=2)
+def format_artifacts(artifacts):
+    formatted = {
+        "case_id": artifacts.get("case_id", "unknown"),
+        "timestamp": artifacts.get("timestamp", datetime.utcnow().isoformat() + "Z"),
+        "items": []
+    }
 
-def main():
-    artifacts = load_artifacts()
-    timestamp = datetime.utcnow().isoformat() + "Z"
-
-    # create directory if missing
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    for category, filename in CATEGORY_FILES.items():
-        items = artifacts.get(category, {})
-
-        # Normalize into list of dicts
-        formatted_items = []
-        if isinstance(items, dict):
-            for key, val in items.items():
-                formatted_items.append({
-                    "id": f"{category}-{key}",
-                    "type": "logs",
-                    "section": category,
-                    "title": key,
-                    "path": key,
-                    "content": val if isinstance(val, str) else json.dumps(val)
+    for section, data in artifacts.items():
+        if section in ("case_id", "timestamp"):
+            continue
+        if isinstance(data, dict):
+            for key, value in data.items():
+                formatted["items"].append({
+                    "id": f"{section}-{key}",
+                    "type": section,
+                    "name": str(key),
+                    "meta": value if isinstance(value, (dict, list)) else {"raw": str(value)}
                 })
-        elif isinstance(items, list):
-            for idx, val in enumerate(items):
-                formatted_items.append({
-                    "id": f"{category}-{idx}",
-                    "type": "logs",
-                    "section": category,
-                    "title": category,
-                    "path": category,
-                    "content": val if isinstance(val, str) else json.dumps(val)
+        elif isinstance(data, list):
+            for i, entry in enumerate(data):
+                formatted["items"].append({
+                    "id": f"{section}-{i}",
+                    "type": section,
+                    "name": str(entry.get("name", entry)) if isinstance(entry, dict) else str(entry),
+                    "meta": entry if isinstance(entry, dict) else {"raw": str(entry)}
                 })
+        else:
+            formatted["items"].append({
+                "id": f"{section}-single",
+                "type": section,
+                "name": section,
+                "meta": {"raw": str(data)}
+            })
+    return formatted
 
-        data = {
-            "case_id": artifacts.get("case_id", "default-case"),
-            "timestamp": timestamp,
-            "items": formatted_items
-        }
-
-        save_json(data, os.path.join(OUTPUT_DIR, filename))
-
-    print(f"[INFO] Split artifacts.json into {len(CATEGORY_FILES)} files under {OUTPUT_DIR}")
+def save_formatted(formatted):
+    print(f"[INFO] Writing output to: {OUTPUT_FILE}")
+    with open(OUTPUT_FILE, "w") as f:
+        json.dump(formatted, f, indent=2)
 
 if __name__ == "__main__":
-    main()
+    artifacts = load_artifacts()
+    if not artifacts:
+        exit(1)
+    formatted = format_artifacts(artifacts)
+    save_formatted(formatted)
+    print("[INFO] Done: formatted_logs.json created successfully")

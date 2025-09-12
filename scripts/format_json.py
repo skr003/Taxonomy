@@ -3,8 +3,9 @@ import json
 import os
 from datetime import datetime
 
-INPUT_FILE = "/tmp/artifacts.json"
-OUTPUT_FILE = "/tmp/formatted_logs.json"
+# Use workspace-relative paths
+INPUT_FILE = "artifacts.json"
+OUTPUT_FILE = "formatted_logs.json"
 
 def load_artifacts():
     if not os.path.exists(INPUT_FILE):
@@ -12,39 +13,49 @@ def load_artifacts():
     with open(INPUT_FILE, "r") as f:
         return json.load(f)
 
-def format_logs(artifacts):
-    case_id = artifacts.get("case_id", "unknown-case")
-    timestamp = artifacts.get("timestamp", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
-    logs = artifacts.get("logs", [])
-
+def format_artifacts(artifacts):
     formatted = {
-        "case_id": case_id,
-        "timestamp": timestamp,
-        "sections": {}
+        "case_id": artifacts.get("case_id", "unknown"),
+        "timestamp": artifacts.get("timestamp", datetime.utcnow().isoformat() + "Z"),
+        "items": []
     }
 
-    # Organize by section → each section is a table-like list
-    for log in logs:
-        section = log.get("section", "Uncategorized")
-        entry = {
-            "title": log.get("title", ""),
-            "path": log.get("path", ""),
-            "content": log.get("content", "")
-        }
-
-        if section not in formatted["sections"]:
-            formatted["sections"][section] = []
-
-        formatted["sections"][section].append(entry)
+    # Flatten each section into readable items
+    for section, data in artifacts.items():
+        if section in ("case_id", "timestamp"):
+            continue
+        if isinstance(data, dict):
+            for key, value in data.items():
+                formatted["items"].append({
+                    "id": f"{section}-{key}",
+                    "type": section,
+                    "name": str(key),
+                    "meta": value if isinstance(value, (dict, list)) else {"raw": str(value)}
+                })
+        elif isinstance(data, list):
+            for i, entry in enumerate(data):
+                formatted["items"].append({
+                    "id": f"{section}-{i}",
+                    "type": section,
+                    "name": str(entry.get("name", entry)) if isinstance(entry, dict) else str(entry),
+                    "meta": entry if isinstance(entry, dict) else {"raw": str(entry)}
+                })
+        else:
+            formatted["items"].append({
+                "id": f"{section}-single",
+                "type": section,
+                "name": section,
+                "meta": {"raw": str(data)}
+            })
 
     return formatted
 
-def save_formatted(data):
+def save_formatted(formatted):
     with open(OUTPUT_FILE, "w") as f:
-        json.dump(data, f, indent=2)
-    print(f"[INFO] Formatted logs written to {OUTPUT_FILE}")
+        json.dump(formatted, f, indent=2)
 
 if __name__ == "__main__":
     artifacts = load_artifacts()
-    formatted = format_logs(artifacts)
+    formatted = format_artifacts(artifacts)
     save_formatted(formatted)
+    print(f"Formatted logs saved to {OUTPUT_FILE}")

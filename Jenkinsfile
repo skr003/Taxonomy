@@ -4,6 +4,7 @@ pipeline {
   environment {
     WORKSPACE_DIR = "${env.WORKSPACE}/forensic_workspace"
     DB_PATH       = "${env.WORKSPACE}/forensic_workspace/metadata.db"
+    GRAFANA_FORENSIC_DIR = "/var/lib/grafana/forensic"
   }
 
   stages {
@@ -75,7 +76,14 @@ pipeline {
 
     stage('Push to Grafana (Simulated)') {
       steps {
-        sh 'python3 scripts/push_grafana.py --in ${WORKSPACE_DIR}/formatted_logs.json --out ${WORKSPACE_DIR}/grafana_payload.json'
+        sh '''
+          python3 scripts/push_grafana.py --in ${WORKSPACE_DIR}/formatted_logs.json --out ${WORKSPACE_DIR}/grafana_payload.json'
+          echo "Copying artifacts.json into Grafana directory..."
+          sudo mkdir -p ${GRAFANA_FORENSIC_DIR}
+          sudo cp ${WORKSPACE}/artifacts.json ${GRAFANA_FORENSIC_DIR}/artifacts.json
+          sudo chown grafana:grafana ${GRAFANA_FORENSIC_DIR}/artifacts.json
+          sudo chmod 640 ${GRAFANA_FORENSIC_DIR}/artifacts.json
+          '''
       }
     }
 

@@ -98,11 +98,11 @@ pipeline {
           
                 # Upload to build-specific path
                 az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/artifacts.json" --file forensic_workspace/artifacts.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-                az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/formatted_logs.json" --file forensic_workspace/formatted_logs.json.json --account-name $STORAGE_ACCOUNT --account-key "$STORAGE_ACCOUNT_KEY" --overwrite
+                az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/formatted_logs.json" --file forensic_workspace/formatted_logs.json.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
 
                 # Upload to 'latest' path
                 az storage blob upload --container-name $CONTAINER --name "latest/artifacts.json" --file forensic_workspace/artifacts.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-                az storage blob upload --container-name $CONTAINER --name "latest/formatted_logs.json.json" --file forensic_workspace/formatted_logs.json.json --account-name $STORAGE_ACCOUNT --account-key "$STORAGE_ACCOUNT_KEY" --overwrite
+                az storage blob upload --container-name $CONTAINER --name "latest/formatted_logs.json.json" --file forensic_workspace/formatted_logs.json.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
                 '''
          }  
       }

@@ -26,17 +26,31 @@ def load_artifacts():
         return json.load(f)
 
 def normalize_items(category, section):
+    """
+    Convert each log file into multiple items (one per line).
+    """
     items = []
     for entry in section:
         path = entry.get("path")
-        content = entry.get("content")
-        items.append({
-            "id": f"{category}-{uuid.uuid4()}",
-            "type": category,
-            "name": os.path.basename(path) if path else category,
-            "path": path,
-            "meta": {"raw": content}
-        })
+        content = entry.get("content", "")
+
+        if not content:
+            continue
+
+        # Split log file into lines
+        lines = content.splitlines()
+        for idx, line in enumerate(lines):
+            if not line.strip():
+                continue
+            items.append({
+                "id": f"{category}-{uuid.uuid4()}",
+                "type": category,
+                "name": os.path.basename(path) if path else category,
+                "path": path,
+                "line_number": idx + 1,
+                "message": line.strip(),
+                "meta": {"source": path}
+            })
     return items
 
 def save_category(filename, items):

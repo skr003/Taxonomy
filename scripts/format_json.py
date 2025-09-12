@@ -26,45 +26,17 @@ def load_artifacts():
         return json.load(f)
 
 def normalize_items(category, section):
-    """
-    Handles multiple possible formats of artifacts:
-    - dict of path: content
-    - list of {path, content}
-    - nested dict with 'logs'
-    """
     items = []
-    if isinstance(section, dict):
-        # Format 1: {"path": "content", ...}
-        for path, content in section.items():
-            if isinstance(content, (str, int, float)):
-                items.append({
-                    "id": f"{category}-{uuid.uuid4()}",
-                    "type": category,
-                    "name": os.path.basename(path),
-                    "path": path,
-                    "meta": {"raw": str(content)}
-                })
-            elif isinstance(content, dict) and "content" in content:
-                items.append({
-                    "id": f"{category}-{uuid.uuid4()}",
-                    "type": category,
-                    "name": os.path.basename(content.get("path", path)),
-                    "path": content.get("path", path),
-                    "meta": {"raw": content.get("content")}
-                })
-
-    elif isinstance(section, list):
-        # Format 2: [{"path": "...", "content": "..."}, ...]
-        for entry in section:
-            if isinstance(entry, dict) and "path" in entry and "content" in entry:
-                items.append({
-                    "id": f"{category}-{uuid.uuid4()}",
-                    "type": category,
-                    "name": os.path.basename(entry["path"]),
-                    "path": entry["path"],
-                    "meta": {"raw": entry["content"]}
-                })
-
+    for entry in section:
+        path = entry.get("path")
+        content = entry.get("content")
+        items.append({
+            "id": f"{category}-{uuid.uuid4()}",
+            "type": category,
+            "name": os.path.basename(path) if path else category,
+            "path": path,
+            "meta": {"raw": content}
+        })
     return items
 
 def save_category(filename, items):
@@ -82,15 +54,17 @@ if __name__ == "__main__":
 
     combined_items = []
     for category, filename in CATEGORY_FILES.items():
-        section = artifacts.get(category, {})
+        section = artifacts.get(category, [])
         items = normalize_items(category, section)
         save_category(filename, items)
         combined_items.extend(items)
 
-    # Save one combined file as well
+    # Save combined file
     with open(os.path.join(WORKSPACE, "formatted_logs.json"), "w") as f:
         json.dump({
-            "case_id": "default-case",
+            "case_id": artifacts.get("case_id", "default-case"),
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "items": combined_items
         }, f, indent=2)
+
+    print(f"[+] Formatted logs written to {WORKSPACE}")

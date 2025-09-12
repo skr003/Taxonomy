@@ -97,7 +97,7 @@ pipeline {
                 CONTAINER="reports"
           
                 # Upload to build-specific path
-                az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/ --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
+                az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/ --destination reports --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
           #      az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/azure.json" --file output/azure.json --account-name $STORAGE_ACCOUNT --account-key "$STORAGE_ACCOUNT_KEY" --overwrite
 
                 # Upload to 'latest' path

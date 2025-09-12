@@ -6,18 +6,7 @@ from datetime import datetime
 
 WORKSPACE = os.path.join(os.getcwd(), "forensic_workspace")
 INPUT_FILE = os.path.join(WORKSPACE, "artifacts.json")
-
-CATEGORY_FILES = {
-    "system_logs": "system_logs.json",
-    "user_activity": "user_activity.json",
-    "network": "network.json",
-    "configuration": "configuration.json",
-    "applications": "applications.json",
-    "processes": "processes.json",
-    "files": "files.json",
-    "packages": "packages.json",
-    "other": "other.json"
-}
+OUTPUT_FILE = os.path.join(WORKSPACE, "formatted_logs.json")
 
 def load_artifacts():
     if not os.path.exists(INPUT_FILE):
@@ -37,7 +26,7 @@ def normalize_items(category, section):
         if not content:
             continue
 
-        # Split log file into lines
+        # Split content into individual lines
         lines = content.splitlines()
         for idx, line in enumerate(lines):
             if not line.strip():
@@ -53,32 +42,22 @@ def normalize_items(category, section):
             })
     return items
 
-def save_category(filename, items):
-    outpath = os.path.join(WORKSPACE, filename)
-    with open(outpath, "w") as f:
-        json.dump({
-            "case_id": str(uuid.uuid4()),
-            "timestamp": datetime.utcnow().isoformat() + "Z",
-            "items": items
-        }, f, indent=2)
-
 if __name__ == "__main__":
     os.makedirs(WORKSPACE, exist_ok=True)
     artifacts = load_artifacts()
 
     combined_items = []
-    for category, filename in CATEGORY_FILES.items():
-        section = artifacts.get(category, [])
+    for category, section in artifacts.items():
+        if category in ["case_id", "timestamp"]:
+            continue
         items = normalize_items(category, section)
-        save_category(filename, items)
         combined_items.extend(items)
 
-    # Save combined file
-    with open(os.path.join(WORKSPACE, "formatted_logs.json"), "w") as f:
+    with open(OUTPUT_FILE, "w") as f:
         json.dump({
             "case_id": artifacts.get("case_id", "default-case"),
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "items": combined_items
         }, f, indent=2)
 
-    print(f"[+] Formatted logs written to {WORKSPACE}")
+    print(f"[+] Combined formatted logs written to {OUTPUT_FILE}")

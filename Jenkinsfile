@@ -67,6 +67,12 @@ pipeline {
       }
     }
 
+    stage('Map to Mitre Attack Framework') {
+      steps {
+        sh 'python3 scripts/mitre_attack.py'
+      }
+    }    
+
     stage('Store Metadata') {
       steps {
         sh 'python3 scripts/store_metadata.py --db ${DB_PATH} --meta ${WORKSPACE_DIR}/priority_list.json'

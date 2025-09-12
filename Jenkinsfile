@@ -63,6 +63,7 @@ pipeline {
     stage('Format Logs') {
       steps {
         sh 'python3 scripts/format_json.py --in ${WORKSPACE_DIR}/artifacts.json --out ${WORKSPACE_DIR}/formatted_logs.json'
+        sh 'python3 scripts/split_formatted_logs.py'
       }
     }
 

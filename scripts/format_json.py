@@ -3,16 +3,22 @@ import json
 import os
 from datetime import datetime
 
-# Use workspace-relative paths
-
-INPUT_FILE = os.path.join("forensic_workspace", "artifacts.json")
-OUTPUT_FILE = "formatted_logs.json"
+# Input inside forensic_workspace
+WORKSPACE_DIR = os.getcwd()
+INPUT_FILE = os.path.join(WORKSPACE_DIR, "forensic_workspace", "artifacts.json")
+OUTPUT_FILE = os.path.join(WORKSPACE_DIR, "formatted_logs.json")
 
 def load_artifacts():
+    print(f"[INFO] Looking for input file at: {INPUT_FILE}")
     if not os.path.exists(INPUT_FILE):
-        raise FileNotFoundError(f"{INPUT_FILE} not found. Run collect_agent.py first.")
+        print(f"[ERROR] {INPUT_FILE} not found. Did collect_agent.py run successfully?")
+        return None
     with open(INPUT_FILE, "r") as f:
-        return json.load(f)
+        try:
+            return json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"[ERROR] Failed to parse JSON: {e}")
+            return None
 
 def format_artifacts(artifacts):
     formatted = {
@@ -21,7 +27,6 @@ def format_artifacts(artifacts):
         "items": []
     }
 
-    # Flatten each section into readable items
     for section, data in artifacts.items():
         if section in ("case_id", "timestamp"):
             continue
@@ -48,15 +53,17 @@ def format_artifacts(artifacts):
                 "name": section,
                 "meta": {"raw": str(data)}
             })
-
     return formatted
 
 def save_formatted(formatted):
+    print(f"[INFO] Writing output to: {OUTPUT_FILE}")
     with open(OUTPUT_FILE, "w") as f:
         json.dump(formatted, f, indent=2)
 
 if __name__ == "__main__":
     artifacts = load_artifacts()
+    if not artifacts:
+        exit(1)
     formatted = format_artifacts(artifacts)
     save_formatted(formatted)
-    print(f"Formatted logs saved to {OUTPUT_FILE}")
+    print("[INFO] Done: formatted_logs.json created successfully")

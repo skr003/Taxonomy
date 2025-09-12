@@ -78,7 +78,7 @@ pipeline {
         sh '''
           python3 scripts/push_grafana.py --in ${WORKSPACE_DIR}/formatted_logs.json --out ${WORKSPACE_DIR}/grafana_payload.json
           echo "Copying artifacts.json into Grafana directory..."
-          sudo cp ${WORKSPACE}/artifacts.json ${GRAFANA_FORENSIC_DIR}/artifacts.json
+          sudo cp ${WORKSPACE}//forensic_workspace/artifacts.json ${GRAFANA_FORENSIC_DIR}/artifacts.json
           sudo chown grafana:grafana ${GRAFANA_FORENSIC_DIR}/artifacts.json
           sudo chmod 640 ${GRAFANA_FORENSIC_DIR}/artifacts.json
           '''

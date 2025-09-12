@@ -1,66 +1,92 @@
+# scripts/process_logs.py
 import os
 import json
 import hashlib
 from datetime import datetime
 
 INPUT_FILE = "forensic_workspace/formatted_logs.json"
+ALL_LOGS_FILE = "forensic_workspace/all_logs.json"
 OUTPUT_DIR = "forensic_workspace/separated"
 
 CATEGORY_FILES = {
-    "System Logs and Events": ("system_logs.json", "system_logs"),
-    "User Activity and Commands": ("user_activity.json", "user_activity"),
-    "Network Connections and Configuration": ("network.json", "network"),
-    "System and User Configuration": ("config.json", "config"),
-    "Application and Service Configurations": ("applications.json", "applications"),
-    "Processes and Memory": ("processes.json", "processes"),
-    "Files and Directories Metadata": ("filesystem.json", "filesystem"),
-    "Package Management and Installed Software": ("packages.json", "packages"),
-    "Other Potential Evidence Paths": ("others.json", "others"),
+    "system_logs_and_events": "system_logs.json",
+    "user_activity_and_commands": "user_activity.json",
+    "network_connections_and_configuration": "network.json",
+    "system_and_user_configuration": "config.json",
+    "application_and_service_configurations": "applications.json",
+    "processes_and_memory": "processes.json",
+    "files_and_directories_metadata": "filesystem.json",
+    "package_management_and_installed_software": "packages.json",
+    "other_potential_evidence_paths": "others.json",
 }
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-with open(INPUT_FILE, "r") as f:
-    data = json.load(f)
+def main():
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-items = data.get("items", [])
-timestamp = data.get("timestamp", datetime.utcnow().isoformat() + "Z")
+    # Step 1: Load formatted_logs.json
+    with open(INPUT_FILE, "r") as f:
+        data = json.load(f)
 
-categorized = {cat: [] for cat in CATEGORY_FILES}
+    items = data.get("items", [])
+    timestamp = data.get("timestamp", datetime.utcnow().isoformat() + "Z")
 
-for idx, item in enumerate(items):
-    try:
-        # forcefully parse string to dict, ignore meta
-        meta = {}
+    cleaned_items = []
+
+    # Step 2: Clean items (remove meta, keep id/type/name)
+    for idx, item in enumerate(items):
         try:
-            meta = eval(item.get("name", "{}"))
-        except Exception:
-            continue  # skip if it’s not valid
+            meta = {}
+            try:
+                meta = eval(item.get("name", "{}"))
+            except Exception:
+                continue
 
-        section = meta.get("section", "Other Potential Evidence Paths")
-        out_file, log_type = CATEGORY_FILES.get(section, ("others.json", "others"))
+            raw_line = str(meta.get("content", ""))
+            line_id = hashlib.md5(raw_line.encode()).hexdigest()[:12]
 
-        raw_line = str(meta.get("content", ""))
-        line_id = hashlib.md5(raw_line.encode()).hexdigest()[:12]
+            cleaned_items.append({
+                "id": f"log-{line_id}",
+                "type": meta.get("section", "other_potential_evidence_paths").replace(" ", "_").lower(),
+                "name": f"[{meta.get('title', 'Unknown')}] ({meta.get('path', 'N/A')}): {raw_line}"
+            })
+        except Exception as e:
+            cleaned_items.append({
+                "id": f"error-{idx}",
+                "type": "error",
+                "name": f"[Parsing Error] {str(e)}"
+            })
 
-        entry = {
-            "id": f"{log_type}-{line_id}",
-            "type": log_type,
-            "name": f"[{meta.get('title', 'Unknown')}] ({meta.get('path', 'N/A')}): {raw_line}"
-        }
+    # Step 3: Save all_logs.json
+    all_logs = {
+        "case_id": data.get("case_id", "default-case"),
+        "timestamp": timestamp,
+        "items": cleaned_items
+    }
 
-        categorized[section].append(entry)
+    with open(ALL_LOGS_FILE, "w") as f:
+        json.dump(all_logs, f, indent=2)
 
-    except Exception as e:
-        categorized["Other Potential Evidence Paths"].append({
-            "id": f"error-{idx}",
-            "type": "error",
-            "name": f"[Parsing Error] {str(e)}"
-        })
+    print(f"Created {ALL_LOGS_FILE} with {len(cleaned_items)} items")
 
-# Write outputs
-for section, (filename, _) in CATEGORY_FILES.items():
-    out_path = os.path.join(OUTPUT_DIR, filename)
-    with open(out_path, "w") as f:
-        json.dump(categorized[section], f, indent=2)
-    print(f"Written {out_path} with {len(categorized[section])} entries")
+    # Step 4: Partition into 9 files
+    categorized = {key: [] for key in CATEGORY_FILES}
+
+    for item in cleaned_items:
+        section = item.get("type", "other_potential_evidence_paths")
+        if section not in CATEGORY_FILES:
+            section = "other_potential_evidence_paths"
+        categorized[section].append(item)
+
+    for section, filename in CATEGORY_FILES.items():
+        out_path = os.path.join(OUTPUT_DIR, filename)
+        with open(out_path, "w") as f:
+            json.dump({
+                "timestamp": timestamp,
+                "items": categorized[section]
+            }, f, indent=2)
+        print(f"Written {out_path} with {len(categorized[section])} entries")
+
+
+if __name__ == "__main__":
+    main()

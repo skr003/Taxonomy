@@ -5,16 +5,13 @@ from datetime import datetime
 
 timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-# Helper: read file contents safely
-def read_file(path, max_lines=200):
+# Helper: read file contents safely (NO TRIMMING)
+def read_file(path):
     if not os.path.exists(path):
         return f"[Not Found] {path}"
     try:
         with open(path, "r", errors="ignore") as f:
-            lines = f.readlines()
-            if max_lines and len(lines) > max_lines:
-                return "".join(lines[-max_lines:])
-            return "".join(lines)
+            return f.read()
     except PermissionError:
         return f"[Permission Denied] {path}"
     except Exception as e:
@@ -74,7 +71,7 @@ user_activity = [
 for path, title in user_activity:
     add_log("User Activity and Commands", title, path, read_file(path))
 
-# Per-user bash history
+# Per-user bash history + home listing
 for user in os.listdir("/home"):
     hist_path = f"/home/{user}/.bash_history"
     add_log("User Activity and Commands", f"{user} Bash History", hist_path, read_file(hist_path))
@@ -139,7 +136,7 @@ for path, title in proc_mem:
     else:
         add_log("Processes and Memory", title, path, read_file(path))
 
-# List all running processes
+# Full process list
 add_log("Processes and Memory", "Process List", "ps aux", os.popen("ps aux").read())
 
 # ===============================
@@ -177,7 +174,7 @@ tmp_dirs = ["/tmp", "/var/tmp"]
 for path in tmp_dirs:
     add_log("Other Potential Evidence", "Temporary Directory", path, list_dir(path))
 
-# Hidden directories in /home
+# Hidden dirs/files inside /home
 for user in os.listdir("/home"):
     user_home = f"/home/{user}"
     try:

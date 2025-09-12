@@ -1,114 +1,81 @@
 #!/usr/bin/env python3
 """
-mitre_auth.py
+mitre_clean_remove_name.py
 
-Maps Authentication & User Accounts artifacts (user_accounts.json)
-to MITRE ATT&CK techniques.
+Load an existing MITRE JSON (default: forensic_workspace/mitre_auth.json or
+forensic_workspace/mitre_mapping.json), remove all "name" keys recursively,
+and write a cleaned file next to the original with suffix ".clean.json".
 
-Output: forensic_workspace/mitre_auth.json
+Usage:
+  python3 scripts/mitre_clean_remove_name.py \
+      --input forensic_workspace/mitre_auth.json \
+      --output forensic_workspace/mitre_auth.clean.json
 """
 
-import os
+import argparse
 import json
+import os
 from datetime import datetime
-from collections import defaultdict, Counter
+from typing import Any
 
-INPUT_FILE = os.environ.get("USER_ACCOUNTS_FILE", "forensic_workspace/separated/user_accounts.json")
-OUTPUT_FILE = os.environ.get("MITRE_AUTH_OUTPUT", "forensic_workspace/mitre_auth.json")
-SAMPLE_LIMIT = 5
+def parse_args():
+    p = argparse.ArgumentParser()
+    p.add_argument("--input", "-i", default="forensic_workspace/mitre_auth.json",
+                   help="Input MITRE JSON file to clean")
+    p.add_argument("--output", "-o", default=None,
+                   help="Output cleaned JSON file (default: input with .clean.json suffix)")
+    return p.parse_args()
 
-# Keywords to MITRE Technique mapping
-KEYWORD_TO_TECH = {
-    "auth.log": ["T1078","T1110","T1098"],
-    "failed password": ["T1110"],
-    "invalid user": ["T1110","T1078"],
-    "btmp": ["T1110"],
-    "faillog": ["T1110"],
-    "lastlog": ["T1078"],
-    "wtmp": ["T1078"],
-    "passwd": ["T1078","T1098"],
-    "shadow": ["T1003"],
-}
-
-TECH_ID_TO_META = {
-    "T1078": {"tactic": "Credential Access"},
-    "T1110": {"tactic": "Credential Access"},
-    "T1098": {"tactic": "Credential Access"},
-    "T1003": {"tactic": "Credential Access"},
-}
-
-def load_items(path):
-    if not os.path.exists(path):
-        print(f"[WARN] Input file not found: {path}")
-        return []
-    with open(path) as f:
-        j = json.load(f)
-        return j.get("items", [])
-
-def match(item):
-    combined = (item.get("name","") + " " + item.get("type","")).lower()
-    hits = set()
-    for key, techs in KEYWORD_TO_TECH.items():
-        if key in combined:
-            hits.update(techs)
-    return hits
+def remove_name_keys(obj: Any) -> Any:
+    """
+    Recursively remove any dictionary key equal to 'name'.
+    Works for nested dicts and lists.
+    """
+    if isinstance(obj, dict):
+        # build new dict without 'name'
+        new = {}
+        for k, v in obj.items():
+            if k == "name":
+                # skip it entirely
+                continue
+            new[k] = remove_name_keys(v)
+        return new
+    elif isinstance(obj, list):
+        return [remove_name_keys(x) for x in obj]
+    else:
+        return obj
 
 def main():
-    items = load_items(INPUT_FILE)
+    args = parse_args()
+    infile = args.input
+    if not os.path.exists(infile):
+        print(f"[ERROR] Input file not found: {infile}")
+        return 2
 
-    by_tech = {}
-    by_tactic = {}
-    unmapped = []
+    outpath = args.output
+    if not outpath:
+        base, ext = os.path.splitext(infile)
+        outpath = f"{base}.clean{ext or '.json'}"
 
-    tech_counts = Counter()
-    tactic_counts = Counter()
-    samples = defaultdict(list)
+    with open(infile, "r") as fh:
+        try:
+            j = json.load(fh)
+        except Exception as e:
+            print(f"[ERROR] Failed to parse JSON {infile}: {e}")
+            return 3
 
-    for item in items:
-        techs = match(item)
-        if not techs:
-            if len(unmapped) < SAMPLE_LIMIT:
-                unmapped.append({
-                    "id": item.get("id"),
-                    "source_file": "user_accounts.json"
-                })
-            continue
-        for t in techs:
-            meta = TECH_ID_TO_META.get(t, {"tactic":"Unknown"})
-            tech_counts[t] += 1
-            tactic_counts[meta["tactic"]] += 1
-            if len(samples[t]) < SAMPLE_LIMIT:
-                samples[t].append({
-                    "id": item.get("id"),
-                    "source_file": "user_accounts.json"
-                })
+    cleaned = remove_name_keys(j)
 
-    for t, count in tech_counts.items():
-        meta = TECH_ID_TO_META.get(t, {"tactic":"Unknown"})
-        by_tech[t] = {
-            "tactic": meta["tactic"],
-            "count": count,
-            "samples": samples[t]
-        }
+    # Optionally add a small provenance field
+    cleaned['_cleaned_at'] = datetime.utcnow().isoformat() + "Z"
+    cleaned['_cleaned_from'] = os.path.basename(infile)
 
-    for tactic, count in tactic_counts.items():
-        by_tactic[tactic] = {"count": count}
+    # write out
+    with open(outpath, "w") as fh:
+        json.dump(cleaned, fh, indent=2)
 
-    output = {
-        "case_id": "default-case",
-        "generated_at": datetime.utcnow().isoformat() + "Z",
-        "total_items_scanned": len(items),
-        "by_technique": by_tech,
-        "by_tactic": by_tactic,
-        "unmapped_count": len(items) - sum(tech_counts.values()),
-        "unmapped_samples": unmapped
-    }
-
-    os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
-    with open(OUTPUT_FILE, "w") as f:
-        json.dump(output, f, indent=2)
-
-    print(f"[INFO] MITRE auth mapping saved to {OUTPUT_FILE}")
+    print(f"[OK] Wrote cleaned file without 'name' fields: {outpath}")
+    return 0
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

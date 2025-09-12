@@ -31,10 +31,10 @@ KEYWORD_TO_TECH = {
 }
 
 TECH_ID_TO_META = {
-    "T1078": {"name": "Valid Accounts", "tactic": "Credential Access"},
-    "T1110": {"name": "Brute Force", "tactic": "Credential Access"},
-    "T1098": {"name": "Account Manipulation", "tactic": "Credential Access"},
-    "T1003": {"name": "OS Credential Dumping", "tactic": "Credential Access"},
+    "T1078": {"tactic": "Credential Access"},
+    "T1110": {"tactic": "Credential Access"},
+    "T1098": {"tactic": "Credential Access"},
+    "T1003": {"tactic": "Credential Access"},
 }
 
 def load_items(path):
@@ -70,25 +70,22 @@ def main():
             if len(unmapped) < SAMPLE_LIMIT:
                 unmapped.append({
                     "id": item.get("id"),
-                    "name": item.get("name"),
                     "source_file": "user_accounts.json"
                 })
             continue
         for t in techs:
-            meta = TECH_ID_TO_META.get(t, {"name":"Unknown","tactic":"Unknown"})
+            meta = TECH_ID_TO_META.get(t, {"tactic":"Unknown"})
             tech_counts[t] += 1
             tactic_counts[meta["tactic"]] += 1
             if len(samples[t]) < SAMPLE_LIMIT:
                 samples[t].append({
                     "id": item.get("id"),
-                    "name": item.get("name"),
                     "source_file": "user_accounts.json"
                 })
 
     for t, count in tech_counts.items():
-        meta = TECH_ID_TO_META.get(t, {"name":"Unknown","tactic":"Unknown"})
+        meta = TECH_ID_TO_META.get(t, {"tactic":"Unknown"})
         by_tech[t] = {
-            "name": meta["name"],
             "tactic": meta["tactic"],
             "count": count,
             "samples": samples[t]

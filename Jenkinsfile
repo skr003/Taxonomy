@@ -65,7 +65,7 @@ stage('Collect Forensics') {
     steps {
         sh '''
             ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "python3 /home/$SSH_USER/forensic/collect_agent.py --out /tmp/artifacts.json"
-            scp -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP:/tmp/artifacts.json artifacts.json
+            scp -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP:/tmp/artifacts.json ${WORKSPACE_DIR}/artifacts.json
         '''
     }
 }

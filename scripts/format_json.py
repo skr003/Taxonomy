@@ -71,5 +71,22 @@ def main():
 
     print(f"[INFO] Split artifacts.json into {len(CATEGORY_FILES)} files under {OUTPUT_DIR}")
 
+# Combined formatted_logs.json
+combined = {
+    "case_id": artifacts.get("case_id", "default-case"),
+    "timestamp": timestamp,
+    "items": []
+}
+for category, filename in CATEGORY_FILES.items():
+    filepath = os.path.join(OUTPUT_DIR, filename)
+    if os.path.exists(filepath):
+        with open(filepath, "r") as f:
+            data = json.load(f)
+            combined["items"].extend(data.get("items", []))
+
+save_json(combined, os.path.join(OUTPUT_DIR, "formatted_logs.json"))
+print("[INFO] Also wrote combined forensic_workspace/formatted_logs.json")
+
+
 if __name__ == "__main__":
     main()

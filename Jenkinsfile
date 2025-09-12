@@ -96,17 +96,13 @@ pipeline {
                 STORAGE_ACCOUNT="taxonomystorage123"
                 CONTAINER="reports"
           
-                # Check if files exist
-                if [ ! -f drift_report.json ]; then echo "Error: drift_report.json not found"; exit 1; fi
-                if [ ! -f output/azure.json ]; then echo "Error: azure.json not found"; exit 1; fi
-
                 # Upload to build-specific path
-                az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/drift_report.json" --file drift_report.json --account-name $STORAGE_ACCOUNT --account-key "$STORAGE_ACCOUNT_KEY" --overwrite
-                az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/azure.json" --file output/azure.json --account-name $STORAGE_ACCOUNT --account-key "$STORAGE_ACCOUNT_KEY" --overwrite
+                az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/artifacts.json" --file forensic_workspace/*.json --account-name $STORAGE_ACCOUNT --account-key "$STORAGE_ACCOUNT_KEY" --overwrite
+          #      az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/azure.json" --file output/azure.json --account-name $STORAGE_ACCOUNT --account-key "$STORAGE_ACCOUNT_KEY" --overwrite
 
                 # Upload to 'latest' path
-                az storage blob upload --container-name $CONTAINER --name "latest/drift_report.json" --file drift_report.json --account-name $STORAGE_ACCOUNT --account-key "$STORAGE_ACCOUNT_KEY" --overwrite
-                az storage blob upload --container-name $CONTAINER --name "latest/azure.json" --file output/azure.json --account-name $STORAGE_ACCOUNT --account-key "$STORAGE_ACCOUNT_KEY" --overwrite
+                az storage blob upload --container-name $CONTAINER --name "latest/artifacts.json" --file artifacts.json --account-name $STORAGE_ACCOUNT --account-key "$STORAGE_ACCOUNT_KEY" --overwrite
+          #      az storage blob upload --container-name $CONTAINER --name "latest/azure.json" --file output/azure.json --account-name $STORAGE_ACCOUNT --account-key "$STORAGE_ACCOUNT_KEY" --overwrite
                 '''
          }  
       }

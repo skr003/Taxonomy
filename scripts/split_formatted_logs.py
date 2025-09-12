@@ -6,7 +6,6 @@ from datetime import datetime
 INPUT_FILE = "forensic_workspace/formatted_logs.json"
 OUTPUT_DIR = "forensic_workspace/separated"
 
-# Mapping of file categories → output filename + type
 CATEGORY_FILES = {
     "System Logs and Events": ("system_logs.json", "system_logs"),
     "User Activity and Commands": ("user_activity.json", "user_activity"),
@@ -27,18 +26,20 @@ with open(INPUT_FILE, "r") as f:
 items = data.get("items", [])
 timestamp = data.get("timestamp", datetime.utcnow().isoformat() + "Z")
 
-# Prepare category buckets
 categorized = {cat: [] for cat in CATEGORY_FILES}
 
 for idx, item in enumerate(items):
     try:
-        # Convert stringified dict to Python dict
-        meta = eval(item.get("name", "{}"))
+        # forcefully parse string to dict, ignore meta
+        meta = {}
+        try:
+            meta = eval(item.get("name", "{}"))
+        except Exception:
+            continue  # skip if it’s not valid
 
         section = meta.get("section", "Other Potential Evidence Paths")
         out_file, log_type = CATEGORY_FILES.get(section, ("others.json", "others"))
 
-        # Unique ID using hash of line
         raw_line = str(meta.get("content", ""))
         line_id = hashlib.md5(raw_line.encode()).hexdigest()[:12]
 
@@ -54,10 +55,10 @@ for idx, item in enumerate(items):
         categorized["Other Potential Evidence Paths"].append({
             "id": f"error-{idx}",
             "type": "error",
-            "name": f"[Parsing Error] Could not parse entry: {str(e)}"
+            "name": f"[Parsing Error] {str(e)}"
         })
 
-# Write out separate files
+# Write outputs
 for section, (filename, _) in CATEGORY_FILES.items():
     out_path = os.path.join(OUTPUT_DIR, filename)
     with open(out_path, "w") as f:

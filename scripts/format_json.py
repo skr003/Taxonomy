@@ -4,7 +4,8 @@ import os
 from datetime import datetime
 
 # Use workspace-relative paths
-INPUT_FILE = "artifacts.json"
+
+INPUT_FILE = os.path.join("forensic_workspace", "artifacts.json")
 OUTPUT_FILE = "formatted_logs.json"
 
 def load_artifacts():

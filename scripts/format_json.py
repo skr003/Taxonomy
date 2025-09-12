@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 import json
 import os
@@ -72,38 +73,4 @@ def main():
     print(f"[INFO] Split artifacts.json into {len(CATEGORY_FILES)} files under {OUTPUT_DIR}")
 
 if __name__ == "__main__":
-    INPUT_FILE = os.path.join(WORKSPACE_DIR, "artifacts.json")
-    OUTPUT_DIR = FORENSIC_DIR
-
-    artifacts = load_artifacts(INPUT_FILE)
-    timestamp = datetime.utcnow().isoformat() + "Z"
-
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    # Write category-based JSON files
-    for category, entries in artifacts.items():
-        if category in CATEGORY_FILES:
-            save_json(
-                {
-                    "case_id": artifacts.get("case_id", "default-case"),
-                    "timestamp": timestamp,
-                    "items": entries,
-                },
-                os.path.join(OUTPUT_DIR, CATEGORY_FILES[category]),
-            )
-
-    # ✅ Also write combined file for mindmap_export.py
-    combined = {
-        "case_id": artifacts.get("case_id", "default-case"),
-        "timestamp": timestamp,
-        "items": []
-    }
-    for category, filename in CATEGORY_FILES.items():
-        filepath = os.path.join(OUTPUT_DIR, filename)
-        if os.path.exists(filepath):
-            with open(filepath, "r") as f:
-                data = json.load(f)
-                combined["items"].extend(data.get("items", []))
-
-    save_json(combined, os.path.join(OUTPUT_DIR, "formatted_logs.json"))
-    print("[INFO] Wrote combined forensic_workspace/formatted_logs.json for compatibility")
+    main()

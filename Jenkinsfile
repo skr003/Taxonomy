@@ -24,12 +24,13 @@ pipeline {
           withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CRED_ID}", keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
             sh '''
               echo "Creating target forensic dir..."
-              ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "mkdir -p /home/$SSH_USER/forensic && chmod 700 /home/$SSH_USER/forensic || true"
-
+              // ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "mkdir -p /home/$SSH_USER/forensic && chmod 700 /home/$SSH_USER/forensic || true"
+              ssh jenkins@49.37.242.162 "mkdir -p /home/$SSH_USER/forensic && chmod 700 /home/$SSH_USER/forensic || true"
               echo "Copying agent to target..."
-              scp -i $SSH_KEY -o StrictHostKeyChecking=no scripts/collect_agent.py $SSH_USER@$TARGET_IP:/home/$SSH_USER/forensic/collect_agent.py
-
-              ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "chmod +x /home/$SSH_USER/forensic/collect_agent.py"
+              //scp -i $SSH_KEY -o StrictHostKeyChecking=no scripts/collect_agent.py $SSH_USER@$TARGET_IP:/home/$SSH_USER/forensic/collect_agent.py
+              ssh jenkins@49.37.242.162 scripts/collect_agent.py $SSH_USER@$TARGET_IP:/home/$SSH_USER/forensic/collect_agent.py
+              //ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "chmod +x /home/$SSH_USER/forensic/collect_agent.py"
+              ssh jenkins@49.37.242.162 "chmod +x /home/$SSH_USER/forensic/collect_agent.py"
             '''
           }
         }

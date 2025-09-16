@@ -43,9 +43,9 @@ pipeline {
           withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CRED_ID}", keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
             sh '''
               echo "Running agent remotely..."
-              ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "python3 /home/$SSH_USER/forensic/collect_agent.py --out /tmp/artifacts.json"
+              ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "python3 /home/$SSH_USER/forensic/collect_agent.py --out "/home/jenkins/forensic/output/forensic_data.json"
               echo "Copying artifacts back to controller workspace..."
-              scp -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP:/tmp/artifacts.json ${WORKSPACE_DIR}/artifacts.json
+              scp -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP:"/home/jenkins/forensic/output/forensic_data.json ${WORKSPACE_DIR}/artifacts.json
             '''
           }
         }

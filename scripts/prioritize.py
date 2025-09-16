@@ -1,101 +1,94 @@
 #!/usr/bin/env python3
-"""
-Prioritize artifacts based on simple heuristics.
-Handles both structured (psutil) and raw text process lists.
-"""
+import argparse
+import json
+import os
+from datetime import datetime
+from hashlib import sha256
 
-import argparse, json, os
+# --- Taxonomy Scoring ---
+# Higher = more volatile & evidentiary
+CATEGORY_SCORES = {
+    "processes": 10,       # volatile
+    "network": 9,          # volatile
+    "system_logs": 8,      # semi-volatile
+    "user_activity": 7,
+    "applications": 6,
+    "configuration": 5,    # persistent
+    "files": 4,
+    "packages": 3,
+    "other": 1
+}
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--in", dest="input", required=True, help="Input artifact JSON file")
-parser.add_argument("--out", required=True, help="Output priority JSON file")
-args = parser.parse_args()
+EVIDENCE_BOOST = {
+    "failed password": 5,
+    "error": 3,
+    "denied": 3,
+    "ssh": 2,
+    "root": 2
+}
 
-with open(args.input) as f:
-    data = json.load(f)
 
-prioritized = []
+def compute_hash(obj) -> str:
+    """Stable SHA256 hash of artifact entry"""
+    return sha256(json.dumps(obj, sort_keys=True).encode()).hexdigest()
 
-# Heuristic 1: processes with suspicious names
-suspicious_names = ["nc", "netcat", "socat", "nmap", "bash", "sh"]
 
-processes = data.get("processes", {})
+def score_artifact(category, content):
+    """Base score from category + boosts from content"""
+    score = CATEGORY_SCORES.get(category, 1)
+    content_lower = content.lower()
 
-# Case A: structured list (from psutil)
-if isinstance(processes, list):
-    for proc in processes:
-        if isinstance(proc, dict):
-            name = proc.get("name", "").lower()
-            if any(s in name for s in suspicious_names):
-                prioritized.append({
-                    "type": "process",
-                    "pid": proc.get("pid"),
-                    "name": proc.get("name"),
-                    "reason": "Suspicious process name",
-                    "score": 9
-                })
+    for keyword, boost in EVIDENCE_BOOST.items():
+        if keyword in content_lower:
+            score += boost
+    return score
 
-# Case B: dict containing raw ps_aux output
-elif isinstance(processes, dict):
-    ps_aux = processes.get("ps_aux")
-    if ps_aux:
-        if isinstance(ps_aux, str):
-            lines = ps_aux.splitlines()
-        elif isinstance(ps_aux, list):
-            lines = ps_aux
-        else:
-            lines = []
 
-        for line in lines:
-            if any(s in line.lower() for s in suspicious_names):
-                prioritized.append({
-                    "type": "process",
-                    "name": line.strip(),
-                    "reason": "Suspicious process in ps output",
-                    "score": 8
-                })
+def prioritize(data):
+    prioritized = []
 
-# Heuristic 2: network connections with remote addresses
-connections = []
-# case 1: data is dict
-if isinstance(data, dict):
-    connections = data.get("connections") or data.get("network", {}).get("net_stat")
-# case 2: data is list of dicts
-elif isinstance(data, list):
-    for item in data:
-        if isinstance(item, dict):
-            if "connections" in item:
-                connections.extend(item["connections"])
-            elif "network" in item and isinstance(item["network"], dict):
-                connections.extend(item["network"].get("net_stat", []))
-# Now process connections
-if isinstance(connections, list):
-    for conn in connections:
-        if isinstance(conn, dict) and conn.get("raddr"):
+    for category, artifacts in data.items():
+        if category in ("case_id", "timestamp"):
+            continue
+        for entry in artifacts:
+            content = entry.get("content", "")
+            score = score_artifact(category, content)
             prioritized.append({
-                "type": "connection",
-                "pid": conn.get("pid"),
-                "laddr": conn.get("laddr"),
-                "raddr": conn.get("raddr"),
-                "status": conn.get("status"),
-                "reason": "Active remote connection",
-                "score": 7
+                "category": category,
+                "path": entry.get("path"),
+                "score": score,
+                "reason": f"{category} artifact",
+                "hash": compute_hash(entry)
             })
 
-elif isinstance(connections, str):
-    for line in connections.splitlines():
-        if "ESTABLISHED" in line or "LISTEN" in line:
-            prioritized.append({
-                "type": "connection",
-                "name": line.strip(),
-                "reason": "Suspicious active connection",
-                "score": 6
-            })
+    prioritized.sort(key=lambda x: x["score"], reverse=True)
+    return prioritized
 
-# Always write out valid JSON
-out = {"prioritized": prioritized or []}
-os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
-with open(args.out, "w") as f:
-    json.dump(out, f, indent=2)
 
-print(f"Wrote priority list to {args.out}, {len(prioritized)} items")
+def main():
+    parser = argparse.ArgumentParser(description="Prioritize forensic artifacts")
+    parser.add_argument("--in", dest="input_file", required=True, help="Input artifacts.json")
+    parser.add_argument("--out", dest="output_file", required=True, help="Output priority_list.json")
+    args = parser.parse_args()
+
+    with open(args.input_file, "r") as f:
+        data = json.load(f)
+
+    prioritized = prioritize(data)
+
+    output = {
+        "case_id": data.get("case_id"),
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "total_artifacts": len(prioritized),
+        "priority_list": prioritized
+    }
+
+    os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
+    with open(args.output_file, "w") as f:
+        json.dump(output, f, indent=2)
+
+    print(f"[+] Prioritization complete → {args.output_file}")
+
+
+if __name__ == "__main__":
+    main()

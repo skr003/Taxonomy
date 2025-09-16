@@ -5,7 +5,7 @@ from datetime import datetime
 
 # Base forensic directory
 WORKSPACE_DIR = os.getcwd()
-FORENSIC_DIR = os.path.join(WORKSPACE_DIR, "forensic_workspace")
+FORENSIC_DIR = os.path.join(WORKSPACE_DIR, "output")
 INPUT_FILE = os.path.join(FORENSIC_DIR, "artifacts.json")
 OUTPUT_FILE = os.path.join(FORENSIC_DIR, "formatted_logs.json")
 

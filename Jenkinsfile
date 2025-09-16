@@ -45,7 +45,7 @@ pipeline {
               echo "Running agent remotely..."
               ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "python3 /home/$SSH_USER/forensic/collect_agent.py"
               echo "Copying artifacts back to controller workspace..."
-              scp -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP:"/home/jenkins/forensic/output/forensic_data.json ${WORKSPACE_DIR}/artifacts.json
+              scp -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP:"/home/jenkins/forensic/output/forensic_data.json ${WORKSPACE_DIR}/artifacts.json"
             '''
           }
         }

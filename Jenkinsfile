@@ -64,18 +64,12 @@ pipeline {
         sh 'python3 scripts/format_json.py --in ${WORKSPACE_DIR}/artifacts.json --out ${WORKSPACE_DIR}/formatted_logs.json'
         sh 'python3 scripts/split_formatted_logs.py'
       }
-    }
-
-    stage('Map to Mitre Attack Framework') {
-      steps {
-        sh 'python3 scripts/mitre_attack.py'
-      }
-    }    
+    }  
 
     stage('Store Metadata') {
       steps {
         sh 'python3 scripts/store_metadata.py --db ${DB_PATH} --meta ${WORKSPACE_DIR}/priority_list.json'
-        archiveArtifacts artifacts: 'forensic_workspace/**', fingerprint: true
+        archiveArtifacts artifacts: 'output/**', fingerprint: true
 
       }
     }

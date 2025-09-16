@@ -4,7 +4,7 @@ import json
 import uuid
 from datetime import datetime
 
-WORKSPACE = os.path.join(os.getcwd(), "forensic_workspace")
+WORKSPACE = os.path.join(os.getcwd(), "output")
 OUTPUT_FILE = os.path.join(WORKSPACE, "artifacts.json")
 
 # Paths grouped into categories

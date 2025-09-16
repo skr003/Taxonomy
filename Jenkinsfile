@@ -1,8 +1,8 @@
 pipeline {
   agent any
   environment {
-    WORKSPACE_DIR = "${env.WORKSPACE}/forensic_workspace"
-    DB_PATH       = "${env.WORKSPACE}/forensic_workspace/metadata.db"
+    WORKSPACE_DIR = "${env.WORKSPACE}/output"
+    DB_PATH       = "${env.WORKSPACE}/output/metadata.db"
     GRAFANA_FORENSIC_DIR = "/var/lib/grafana/forensic"
   }
 

@@ -18,6 +18,20 @@ CATEGORY_FILES = {
     "other_potential_evidence_paths": "others.json",
 }
 
+# Map old collector categories → new taxonomy keys
+CATEGORY_MAP = {
+    "system_logs": "system_logs_and_events",
+    "user_activity": "user_activity_and_commands",
+    "network": "network_connections_and_configuration",
+    "configuration": "system_and_user_configuration",
+    "applications": "application_and_service_configurations",
+    "processes": "processes_and_memory",
+    "files": "files_and_directories_metadata",
+    "packages": "package_management_and_installed_software",
+    "other": "other_potential_evidence_paths",
+}
+
+
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -28,17 +42,18 @@ def main():
     with open(INPUT_FILE, "r") as f:
         data = json.load(f)
 
+    items = data.get("items", [])
     timestamp = data.get("timestamp", datetime.utcnow().isoformat() + "Z")
 
-    # Initialize buckets
-    categorized = {k: [] for k in CATEGORY_FILES}
+    categorized = {key: [] for key in CATEGORY_FILES}
 
-    for category in categorized:
-        # Only include if present in data
-        if category in data:
-            categorized[category] = data.get(category, [])
+    # Distribute items into mapped categories
+    for item in items:
+        old_cat = item.get("type", "other")
+        new_cat = CATEGORY_MAP.get(old_cat, "other_potential_evidence_paths")
+        categorized[new_cat].append(item)
 
-    # Write out each file
+    # Write each category file
     for section, filename in CATEGORY_FILES.items():
         out_path = os.path.join(OUTPUT_DIR, filename)
         with open(out_path, "w") as f:
@@ -53,6 +68,7 @@ def main():
                 indent=2,
             )
         print(f"[INFO] Written {out_path} with {len(categorized[section])} entries")
+
 
 if __name__ == "__main__":
     main()

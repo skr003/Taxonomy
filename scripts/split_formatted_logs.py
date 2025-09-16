@@ -4,9 +4,9 @@ import json
 import hashlib
 from datetime import datetime
 
-INPUT_FILE = "forensic_workspace/formatted_logs.json"
-ALL_LOGS_FILE = "forensic_workspace/all_logs.json"
-OUTPUT_DIR = "forensic_workspace/separated"
+INPUT_FILE = "output/formatted_logs.json"
+ALL_LOGS_FILE = "output/artifacts.json"
+OUTPUT_DIR = "output/separated"
 
 CATEGORY_FILES = {
     "system_logs_and_events": "system_logs.json",

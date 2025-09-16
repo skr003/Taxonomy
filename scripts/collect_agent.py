@@ -49,22 +49,26 @@ CATEGORIES = {
 
 def safe_read(path):
     try:
+        # Handle user activity binary files with proper commands
         if path.endswith("wtmp"):
-            return subprocess.getoutput("last -n 50")   # recent 50 logins
+            return subprocess.getoutput("last -f /var/log/wtmp")
         if path.endswith("utmp"):
             return subprocess.getoutput("who")
         if path.endswith("lastlog"):
-            return subprocess.getoutput("lastlog | head -n 50")
+            return subprocess.getoutput("lastlog")
         if path.endswith("btmp"):
-            return subprocess.getoutput("last -f /var/log/btmp -n 50")
-        
+            return subprocess.getoutput("last -f /var/log/btmp")
+
+        # Handle directories
         if os.path.isdir(path):
             return f"[directory listing] {os.listdir(path)}"
+
+        # Handle regular text files
         with open(path, "r", errors="ignore") as f:
             return f.read()
+
     except Exception as e:
         return f"[unavailable: {e}]"
-
 
 def collect():
     os.makedirs(WORKSPACE, exist_ok=True)

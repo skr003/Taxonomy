@@ -2,6 +2,7 @@
 import os
 import json
 import uuid
+import subprocess
 from datetime import datetime
 
 WORKSPACE = os.path.join(os.getcwd(), "output")
@@ -48,12 +49,22 @@ CATEGORIES = {
 
 def safe_read(path):
     try:
+        if path.endswith("wtmp"):
+            return subprocess.getoutput("last -n 50")   # recent 50 logins
+        if path.endswith("utmp"):
+            return subprocess.getoutput("who")
+        if path.endswith("lastlog"):
+            return subprocess.getoutput("lastlog | head -n 50")
+        if path.endswith("btmp"):
+            return subprocess.getoutput("last -f /var/log/btmp -n 50")
+        
         if os.path.isdir(path):
             return f"[directory listing] {os.listdir(path)}"
         with open(path, "r", errors="ignore") as f:
             return f.read()
     except Exception as e:
         return f"[unavailable: {e}]"
+
 
 def collect():
     os.makedirs(WORKSPACE, exist_ok=True)

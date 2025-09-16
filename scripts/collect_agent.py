@@ -9,12 +9,12 @@ OUTPUT_FILE = os.path.join(WORKSPACE, "artifacts.json")
 
 # Paths grouped into categories
 CATEGORIES = {
-#    "system_logs": [
-#        "/var/log/auth.log", "/var/log/secure",
-#        "/var/log/syslog", "/var/log/messages",
-#        "/var/log/dmesg", "/var/log/kern.log",
-#        "/var/log/faillog"
-#    ],
+    "system_logs": [
+        "/var/log/auth.log", "/var/log/secure",
+        "/var/log/syslog", "/var/log/messages",
+        "/var/log/dmesg", "/var/log/kern.log",
+        "/var/log/faillog"
+    ],
     "user_activity": [
         "/var/log/lastlog", "/var/run/utmp", "/var/log/wtmp",
         "/var/log/btmp"

@@ -56,7 +56,19 @@ elif isinstance(processes, dict):
                 })
 
 # Heuristic 2: network connections with remote addresses
-connections = data.get("connections") or data.get("network", {}).get("net_stat")
+connections = []
+# case 1: data is dict
+if isinstance(data, dict):
+    connections = data.get("connections") or data.get("network", {}).get("net_stat")
+# case 2: data is list of dicts
+elif isinstance(data, list):
+    for item in data:
+        if isinstance(item, dict):
+            if "connections" in item:
+                connections.extend(item["connections"])
+            elif "network" in item and isinstance(item["network"], dict):
+                connections.extend(item["network"].get("net_stat", []))
+# Now process connections
 if isinstance(connections, list):
     for conn in connections:
         if isinstance(conn, dict) and conn.get("raddr"):
@@ -69,6 +81,7 @@ if isinstance(connections, list):
                 "reason": "Active remote connection",
                 "score": 7
             })
+
 elif isinstance(connections, str):
     for line in connections.splitlines():
         if "ESTABLISHED" in line or "LISTEN" in line:

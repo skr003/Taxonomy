@@ -35,7 +35,7 @@ pipeline {
     stage('Store Metadata') {
       agent { label 'agent' }  
       steps {
-        stash name: 'artifacts', includes: '${WORKSPACE_DIR}/output/**'
+        stash name: 'artifacts', includes: 'output/**'
         //archiveArtifacts artifacts: 'output/**', fingerprint: true
       }
     }

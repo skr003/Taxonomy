@@ -1,6 +1,6 @@
 
 pipeline {
-  agent any
+  agent target-vm
   environment {
     WORKSPACE_DIR = "${env.WORKSPACE}/output"
     DB_PATH       = "${env.WORKSPACE}/output/metadata.db"

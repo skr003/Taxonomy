@@ -54,7 +54,7 @@ pipeline {
             steps {
                 sh """
                     echo "[+] Formatting logs for Loki"
-                    python3 scripts/format_for_loki.py --in ${WORKSPACE_DIR}/priority.json --out ${WORKSPACE_DIR}/loki_payload.json
+                    python3 scripts/format_for_loki.py --in ${WORKSPACE_DIR}/output/priority.json --out ${WORKSPACE_DIR}/output/loki_payload.json
                 """
             }
         }

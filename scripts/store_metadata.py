@@ -26,7 +26,7 @@ def main():
 
     # Connect to Mongo
     db = client["TaxonomyDB"]
-    collection = db["artifacts"]
+    collection = db["Artifacts"]
     collection.insert_one(data)
 
     # Insert JSON

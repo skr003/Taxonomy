@@ -25,7 +25,7 @@ pipeline {
           withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CRED_ID}", keyFileVariable: 'Taxonomy-vm-ssh-key', usernameVariable: 'SSH_USER')]) {
             sh '''
               echo "Creating target forensic dir..."
-              ssh -i $SSH_KEY StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "mkdir -p /home/$SSH_USER/forensic && chmod -R 777 /home/$SSH_USER/forensic || true"
+              ssh -i $SSH_KEY StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "mkdir -p /home/$SSH_USER/forensic/output && chmod -R 777 /home/$SSH_USER/forensic || true"
               echo "Copying agent to target..."
               scp -i $SSH_KEY StrictHostKeyChecking=no scripts/collect_agent.py $SSH_USER@$TARGET_IP:/home/$SSH_USER/forensic/collect_agent.py
               ssh -i $SSH_KEY StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "chmod +x /home/$SSH_USER/forensic/collect_agent.py"

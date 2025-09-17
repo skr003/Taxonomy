@@ -34,6 +34,7 @@ pipeline {
       steps {
         unstash 'artifacts'
         archiveArtifacts artifacts: 'output/**', fingerprint: true
+        archiveArtifacts artifacts: "${WORKSPACE_DIR}/*.json", fingerprint: true
       }
     }    
       
@@ -75,11 +76,6 @@ pipeline {
                 """
             }
         }
-    post {
-        always {
-            archiveArtifacts artifacts: "${WORKSPACE_DIR}/*.json", fingerprint: true
-        }
-    }
       
     stage('Prioritize Artifacts') {
       agent { label 'agent' }

@@ -6,7 +6,7 @@ pipeline {
     DB_PATH       = "/home/jenkins/workspace/Taxonomy_NEW/output/metadata.db"
     GRAFANA_FORENSIC_DIR = "/var/lib/grafana/forensic"
     FORENSIC_AGENT = "/home/jenkins/forensic/collect_agent.py"
-    LOKI_URL = "http://loki:3100/loki/api/v1/push"
+    LOKI_URL = "http://172.16.0.4:3100/loki/api/v1/push"
     MONGO_URI = credentials('mongo-atlas-secret') // Jenkins credential ID
     }
   stages {

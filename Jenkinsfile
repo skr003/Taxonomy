@@ -22,7 +22,7 @@ pipeline {
           string(credentialsId: 'TARGET_IP', variable: 'TARGET_IP'),
           string(credentialsId: 'SSH_CRED_ID', variable: 'SSH_CRED_ID')
         ]) {
-          withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CRED_ID}", keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+          withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CRED_ID}", keyFileVariable: 'Taxonomy-vm-ssh-key', usernameVariable: 'SSH_USER')]) {
             sh '''
               echo "Creating target forensic dir..."
               ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "mkdir -p /home/$SSH_USER/forensic/output && chmod -R 700 /home/$SSH_USER/forensic || true"

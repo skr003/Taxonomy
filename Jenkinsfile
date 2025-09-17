@@ -23,7 +23,6 @@ pipeline {
         sh 'python3 scripts/prioritize.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/priority_list.json'
       }
     }
-
     stage('Format and Split Logs') {
         agent { label 'agent' }
         steps {
@@ -31,7 +30,6 @@ pipeline {
         sh 'python3 scripts/split_formatted_logs.py'
       }
     }  
-
     stage('Archive artifacts') {
       agent { label 'agent' }  
       steps {
@@ -44,10 +42,8 @@ pipeline {
       steps {
         unstash 'artifacts'
         archiveArtifacts artifacts: 'output/**', fingerprint: true
-
       }
     }      
-
     stage('Upload Reports to Azure Storage') {
       agent { label 'master' }    
       steps {
@@ -65,12 +61,6 @@ pipeline {
             }  
       }
     }        
-    }
-    
-    stage('Export Mindmap') {
-      steps {
-        sh 'python3 scripts/mindmap_export.py --in ${WORKSPACE_DIR}/formatted_logs.json --out ${WORKSPACE_DIR}/mindmap.json'
-      }
     }
   }
 }

@@ -40,8 +40,6 @@ pipeline {
                 unstash 'artifacts'
                 archiveArtifacts artifacts: 'output/**', fingerprint: true                
                 sh """
-                    unstash 'artifacts'
-                    archiveArtifacts artifacts: 'output/**', fingerprint: true
                     echo "[+] Formatting logs for Loki"
                     python3 scripts/format_for_loki.py --in ${MASTER_WORKSPACE_DIR}/output/priority_list.json --out ${MASTER_WORKSPACE_DIR}/output/loki_payload.json
                 """

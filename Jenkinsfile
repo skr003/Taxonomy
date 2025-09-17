@@ -14,8 +14,8 @@ pipeline {
         echo "Copying agent to target..."
         scripts/collect_agent.py
         echo ${WORKSPACE_DIR}
-        archiveArtifacts artifacts: '**/*', fingerprint: true
       '''
+      archiveArtifacts artifacts: '**/*', fingerprint: true    
     }
   }
     stage('Run Agent on Target (collect live data)') {

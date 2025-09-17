@@ -31,15 +31,9 @@ pipeline {
         steps {
         sh 'python3 scripts/format_json.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/formatted_logs.json'
         sh 'python3 scripts/split_formatted_logs.py'
+        stash name: 'artifacts', includes: 'output/**'    
       }
     }  
-    stage('Archive artifacts') {
-      agent { label 'agent' }  
-      steps {
-        stash name: 'artifacts', includes: 'output/**'
-        //archiveArtifacts artifacts: 'output/**', fingerprint: true
-      }
-    }
     stage('Copy artifacts to Master') {
       agent { label 'master' }  
       steps {
@@ -51,6 +45,8 @@ pipeline {
             agent { label 'master' }  
             steps {
                 sh """
+                    unstash 'artifacts'
+                    archiveArtifacts artifacts: 'output/**', fingerprint: true
                     echo "[+] Formatting logs for Loki"
                     python3 scripts/format_for_loki.py --in ${MASTER_WORKSPACE_DIR}/output/priority_list.json --out ${MASTER_WORKSPACE_DIR}/output/loki_payload.json
                 """

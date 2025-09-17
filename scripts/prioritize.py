@@ -67,8 +67,8 @@ def prioritize(data):
 
 def main():
     parser = argparse.ArgumentParser(description="Prioritize forensic artifacts")
-    parser.add_argument("--in", dest="input_file", required=True, help="Input artifacts.json")
-    parser.add_argument("--out", dest="output_file", required=True, help="Output priority_list.json")
+    parser.add_argument("--in", dest="input_file", required=True, help="Input output/artifacts.json")
+    parser.add_argument("--out", dest="output_file", required=True, help="Output output/priority_list.json")
     args = parser.parse_args()
 
     with open(args.input_file, "r") as f:

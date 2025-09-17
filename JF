@@ -1,0 +1,17 @@
+pipeline {
+    agent { label 'agent' }
+
+    stages {
+        stage('Run ls') {
+            steps {
+                sh 'ls > ls.txt'
+            }
+        }
+
+        stage('Archive to Master') {
+            steps {
+                archiveArtifacts artifacts: 'ls.txt', fingerprint: true
+            }
+        }
+    }
+}

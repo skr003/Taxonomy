@@ -2,7 +2,7 @@
 pipeline {
     agent { label 'agent' }
     environment {
-    WORKSPACE_DIR = "${env.WORKSPACE}/"
+    WORKSPACE_DIR = "${env.WORKSPACE}"
     DB_PATH       = "${env.WORKSPACE}/output/metadata.db"
     GRAFANA_FORENSIC_DIR = "/var/lib/grafana/forensic"
     }
@@ -13,38 +13,18 @@ pipeline {
         chmod -R 700 /home/jenkins/workspace/ || true
         echo "Copying agent to target..."
         scripts/collect_agent.py
-        echo ${WORKSPACE_DIR}
       '''
-      archiveArtifacts artifacts: '**/*', fingerprint: true    
     }
   }
-    stage('Run Agent on Target (collect live data)') {
-      steps {
-        withCredentials([
-          string(credentialsId: 'TARGET_IP', variable: 'TARGET_IP'),
-          string(credentialsId: 'SSH_CRED_ID', variable: 'SSH_CRED_ID')
-        ]) {
-          withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CRED_ID}", keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
-            sh '''
-              echo "Running agent remotely..."
-              ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "python3 /home/$SSH_USER/forensic/collect_agent.py"
-              echo "Copying artifacts back to controller workspace..."
-              scp -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP:/home/jenkins/output/artifacts.json ${WORKSPACE_DIR}/artifacts.json
-            '''
-          }
-        }
-      }
-    }
-
     stage('Prioritize Artifacts') {
       steps {
-        sh 'python3 scripts/prioritize.py --in ${WORKSPACE_DIR}/artifacts.json --out ${WORKSPACE_DIR}/priority_list.json'
+        sh 'python3 scripts/prioritize.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/priority_list.json'
       }
     }
 
     stage('Format Logs') {
       steps {
-        sh 'python3 scripts/format_json.py --in ${WORKSPACE_DIR}/artifacts.json --out ${WORKSPACE_DIR}/formatted_logs.json'
+        sh 'python3 scripts/format_json.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/formatted_logs.json'
         sh 'python3 scripts/split_formatted_logs.py'
       }
     }  

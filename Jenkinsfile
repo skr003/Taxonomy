@@ -27,7 +27,7 @@ pipeline {
               echo "Creating target forensic dir..."
               ssh -i $SSH_KEY StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "pwd && ls && mkdir -p /home/$SSH_USER/forensic/output && chmod -R 700 /home/$SSH_USER/forensic || true"
               echo "Copying agent to target..."
-              scp -i $SSH_KEY StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "scripts/collect_agent.py $SSH_USER@$TARGET_IP:/home/$SSH_USER/forensic/collect_agent.py"
+              scp -i $SSH_KEY StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "/var/lib/jenkins/workpace/Taxonomy_NEW/scripts/collect_agent.py $SSH_USER@$TARGET_IP:/home/$SSH_USER/forensic/collect_agent.py"
               ssh -i $SSH_KEY StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "chmod +x /home/$SSH_USER/forensic/collect_agent.py"
             '''
           }

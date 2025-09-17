@@ -2,6 +2,7 @@
 pipeline {
     agent { label 'agent' }
     environment {
+    WORKSPACE_DIR = "${env.WORKSPACE}/"
     DB_PATH       = "${env.WORKSPACE}/output/metadata.db"
     GRAFANA_FORENSIC_DIR = "/var/lib/grafana/forensic"
     }

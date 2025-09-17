@@ -18,20 +18,23 @@ pipeline {
 
     stage('Deploy Agent Script & Ensure Target Dir') {
       steps {
-        withCredentials([
-          string(credentialsId: 'TARGET_IP', variable: 'TARGET_IP'),
-          string(credentialsId: 'SSH_CRED_ID', variable: 'SSH_CRED_ID')
-        ]) {
-          withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CRED_ID}", keyFileVariable: 'Taxonomy-vm-ssh-key', usernameVariable: 'SSH_USER')]) {
-            sh '''
-              echo "Creating target forensic dir..."
-              ssh -i $SSH_KEY StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "mkdir -p /home/$SSH_USER/forensic/output && chmod -R 700 /home/$SSH_USER/forensic || true"
-              echo "Copying agent to target..."
-              scp -i $SSH_KEY StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "scripts/collect_agent.py $SSH_USER@$TARGET_IP:/home/$SSH_USER/forensic/collect_agent.py"
-              ssh -i $SSH_KEY StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "chmod +x /home/$SSH_USER/forensic/collect_agent.py"
-            '''
-          }
-        }
+         withCredentials([
+             string(credentialsId: 'TARGET_IP', variable: 'TARGET_IP'),
+             string(credentialsId: 'SSH_CRED_ID', variable: 'SSH_CRED_ID')
+               ]) {
+                 withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CRED_ID}", keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+      sh '''
+        echo "Creating target forensic dir..."
+        ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "mkdir -p /home/$SSH_USER/forensic/output && chmod -R 700 /home/$SSH_USER/forensic || true"
+
+        echo "Copying agent to target..."
+        scp -i $SSH_KEY -o StrictHostKeyChecking=no scripts/collect_agent.py $SSH_USER@$TARGET_IP:/home/$SSH_USER/forensic/collect_agent.py
+
+        echo "Making agent executable..."
+        ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "chmod +x /home/$SSH_USER/forensic/collect_agent.py"
+      '''
+    }
+  }
       }
     }
 

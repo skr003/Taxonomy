@@ -21,7 +21,7 @@ pipeline {
         echo "Creating target forensic dir..."
         ls
         pwd
-        #chmod -R 700 /home/jenkins/workspace/ || true
+        chmod -R 700 /home/jenkins/workspace/ || true
 
         echo "Copying agent to target..."
         scripts/collect_agent.py

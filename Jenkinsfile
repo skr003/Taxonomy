@@ -10,7 +10,7 @@ pipeline {
       steps {
         echo 'Preparing workspace...'
         sh 'mkdir -p /home/jenkins/workspace/Taxonomy'
-        sh 'python3 scripts/initialize.py'
+        sh 'python3 scripts/initialize.py --workspace ${WORKSPACE_DIR}'
       }
     }
 

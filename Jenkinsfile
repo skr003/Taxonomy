@@ -66,7 +66,7 @@ pipeline {
                 sh """
                     echo "[+] Sending logs to Loki API"
                     curl -X POST -H "Content-Type: application/json" \\
-                        -d @${WORKSPACE_DIR}/loki_payload.json ${LOKI_URL}
+                        -d @${MASTER_WORKSPACE_DIR}/loki_payload.json ${LOKI_URL}
                 """
             }
         }

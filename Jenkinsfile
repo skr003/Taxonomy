@@ -13,9 +13,8 @@ pipeline {
         chmod -R 700 /home/jenkins/workspace/ || true
         echo "Copying agent to target..."
         scripts/collect_agent.py
-        echo "Making agent executable..."
-        #chmod +x forensic/collect_agent.py
-        archiveArtifacts artifacts: 'output/*', fingerprint: true
+        echo ${WORKSPACE_DIR}
+        archiveArtifacts artifacts: '${WORKSPACE_DIR}/*', fingerprint: true
       '''
     }
   }

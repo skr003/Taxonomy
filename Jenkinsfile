@@ -7,27 +7,15 @@ pipeline {
     GRAFANA_FORENSIC_DIR = "/var/lib/grafana/forensic"
     }
   stages {
-//    stage('Initialize') {
-//      steps {
-//        echo 'Preparing workspace...'
-//       sh 'mkdir -p /home/jenkins/workspace/Taxonomy'
-//        sh 'python3 scripts/initialize.py --workspace ${WORKSPACE_DIR}'
-//      }
-//    }
-
     stage('Deploy Agent Script & Ensure Target Dir') {
       steps {
       sh '''
-        echo "Creating target forensic dir..."
-        ls
-        pwd
         chmod -R 700 /home/jenkins/workspace/ || true
-
         echo "Copying agent to target..."
         scripts/collect_agent.py
-
         echo "Making agent executable..."
         #chmod +x forensic/collect_agent.py
+        archiveArtifacts artifacts: 'output/*', fingerprint: true
       '''
     }
   }

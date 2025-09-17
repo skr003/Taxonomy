@@ -22,21 +22,21 @@ pipeline {
   }
 
 
-
-
-
-pipeline {
-    agent any
-    environment {
-        WORKSPACE_DIR = "/data/logs"
-        FORENSIC_AGENT = "/home/jenkins/forensic/collect_agent.py"
-        LOKI_URL = "http://loki:3100/loki/api/v1/push"
-        MONGO_URI = credentials('mongo-atlas-secret') // Jenkins credential ID
+    stage('Archive artifacts') {
+      agent { label 'agent' }  
+      steps {
+        stash name: 'artifacts', includes: 'output/**'
+        //archiveArtifacts artifacts: 'output/**', fingerprint: true
+      }
     }
-    stages {
-        stage('Stage 1: Initialize') {
-        stage('Stage 2: Collect Artifacts') {
-        stage('Stage 3: Prioritize Artifacts') {
+    stage('Copy artifacts to Master') {
+      agent { label 'master' }  
+      steps {
+        unstash 'artifacts'
+        archiveArtifacts artifacts: 'output/**', fingerprint: true
+      }
+    }    
+      
         stage('Stage 4: Format Logs for Loki') {
             steps {
                 sh """
@@ -75,17 +75,11 @@ pipeline {
                 """
             }
         }
-    }
     post {
         always {
             archiveArtifacts artifacts: "${WORKSPACE_DIR}/*.json", fingerprint: true
         }
     }
-}
-
-
-
-
       
     stage('Prioritize Artifacts') {
       agent { label 'agent' }
@@ -100,20 +94,7 @@ pipeline {
         sh 'python3 scripts/split_formatted_logs.py'
       }
     }  
-    stage('Archive artifacts') {
-      agent { label 'agent' }  
-      steps {
-        stash name: 'artifacts', includes: 'output/**'
-        //archiveArtifacts artifacts: 'output/**', fingerprint: true
-      }
-    }
-    stage('Copy artifacts to Master') {
-      agent { label 'master' }  
-      steps {
-        unstash 'artifacts'
-        archiveArtifacts artifacts: 'output/**', fingerprint: true
-      }
-    }      
+  
     stage('Upload Reports to Azure Storage') {
       agent { label 'master' }    
       steps {

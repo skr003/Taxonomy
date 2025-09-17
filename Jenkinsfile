@@ -19,7 +19,19 @@ pipeline {
       '''
     }
   }
-
+    stage('Prioritize Artifacts') {
+      agent { label 'agent' }
+      steps {
+        sh 'python3 scripts/prioritize.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/priority_list.json'
+      }
+    }
+    stage('Format and Split Logs') {
+        agent { label 'agent' }
+        steps {
+        sh 'python3 scripts/format_json.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/formatted_logs.json'
+        sh 'python3 scripts/split_formatted_logs.py'
+      }
+    }  
 
     stage('Archive artifacts') {
       agent { label 'agent' }  
@@ -38,6 +50,7 @@ pipeline {
     }    
       
         stage('Stage 4: Format Logs for Loki') {
+            agent { label 'master' }  
             steps {
                 sh """
                     echo "[+] Formatting logs for Loki"
@@ -47,6 +60,7 @@ pipeline {
         }
 
         stage('Stage 5: Push Logs to Loki') {
+            agent { label 'master' }  
             steps {
                 sh """
                     echo "[+] Sending logs to Loki API"
@@ -57,6 +71,7 @@ pipeline {
         }
 
         stage('Stage 6: Store Metadata in MongoDB Atlas') {
+            agent { label 'master' }   
             steps {
                 sh """
                     echo "[+] Storing metadata into MongoDB Atlas"
@@ -68,6 +83,7 @@ pipeline {
         }
 
         stage('Stage 7: Visualization') {
+            agent { label 'master' }  
             steps {
                 sh """
                     echo "[+] Visualization available in Grafana + Loki dashboards"
@@ -76,20 +92,6 @@ pipeline {
             }
         }
       
-    stage('Prioritize Artifacts') {
-      agent { label 'agent' }
-      steps {
-        sh 'python3 scripts/prioritize.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/priority_list.json'
-      }
-    }
-    stage('Format and Split Logs') {
-        agent { label 'agent' }
-        steps {
-        sh 'python3 scripts/format_json.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/formatted_logs.json'
-        sh 'python3 scripts/split_formatted_logs.py'
-      }
-    }  
-  
     stage('Upload Reports to Azure Storage') {
       agent { label 'master' }    
       steps {

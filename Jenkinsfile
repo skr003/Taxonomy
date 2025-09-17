@@ -1,13 +1,14 @@
 
 pipeline {
-    agent { label 'agent' }
+    agent none
     environment {
     WORKSPACE_DIR = "${env.WORKSPACE}"
     DB_PATH       = "${env.WORKSPACE}/output/metadata.db"
     GRAFANA_FORENSIC_DIR = "/var/lib/grafana/forensic"
     }
   stages {
-    stage('Deploy Agent Script & Ensure Target Dir') {
+    stage('Deploy Agent Script & Collect Logs') {
+      agent { label 'agent' }
       steps {
       sh '''
         chmod -R 700 /home/jenkins/workspace/ || true
@@ -17,25 +18,37 @@ pipeline {
     }
   }
     stage('Prioritize Artifacts') {
+      agent { label 'agent' }
       steps {
         sh 'python3 scripts/prioritize.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/priority_list.json'
       }
     }
 
     stage('Format Logs') {
-      steps {
+        agent { label 'agent' }
+        steps {
         sh 'python3 scripts/format_json.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/formatted_logs.json'
         sh 'python3 scripts/split_formatted_logs.py'
       }
     }  
 
     stage('Store Metadata') {
+      agent { label 'agent' }  
       steps {
         sh 'python3 scripts/store_metadata.py --db ${DB_PATH} --meta ${WORKSPACE_DIR}/output/priority_list.json'
+        stash name: 'artifacts', includes: '${WORKSPACE_DIR}/output/**'
         archiveArtifacts artifacts: 'output/**', fingerprint: true
 
       }
     }
+    stage('Copy to Master') {
+      agent { label 'master' }  
+      steps {
+        unstash 'artifacts'
+        archiveArtifacts artifacts: 'output/**', fingerprint: true
+
+      }
+    }      
 
     stage('Upload Reports to Azure Storage') {
       steps {

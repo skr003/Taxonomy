@@ -25,9 +25,9 @@ def main():
         data = json.load(f)
 
     # Connect to Mongo
-    client = MongoClient(uri)
-    db = client["forensic_db"]
+    db = client["TaxonomyDB"]
     collection = db["artifacts"]
+    collection.insert_one(data)
 
     # Insert JSON
     if isinstance(data, list):

@@ -33,7 +33,7 @@ pipeline {
       steps {
         unstash 'artifacts'
         archiveArtifacts artifacts: 'output/**', fingerprint: true
-        archiveArtifacts artifacts: "${WORKSPACE_DIR}/*.json", fingerprint: true
+        // archiveArtifacts artifacts: "${WORKSPACE_DIR}/*.json", fingerprint: true
       }
     }    
       

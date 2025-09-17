@@ -14,7 +14,7 @@ pipeline {
         echo "Copying agent to target..."
         scripts/collect_agent.py
         echo ${WORKSPACE_DIR}
-        archiveArtifacts artifacts: '${WORKSPACE_DIR}/output/*.*', fingerprint: true
+        archiveArtifacts artifacts: '**/*', fingerprint: true
       '''
     }
   }

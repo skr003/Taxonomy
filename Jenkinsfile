@@ -1,4 +1,3 @@
-
 pipeline {
     agent none
     environment {
@@ -17,6 +16,89 @@ pipeline {
       '''
     }
   }
+
+
+
+
+
+pipeline {
+    agent any
+    environment {
+        WORKSPACE_DIR = "/data/logs"
+        FORENSIC_AGENT = "/home/jenkins/forensic/collect_agent.py"
+        LOKI_URL = "http://loki:3100/loki/api/v1/push"
+        MONGO_URI = credentials('mongo-atlas-secret') // Jenkins credential ID
+    }
+    stages {
+        stage('Stage 1: Initialize') {
+        stage('Stage 2: Collect Artifacts') {
+        stage('Stage 3: Prioritize Artifacts') {
+        stage('Stage 4: Format Logs for Loki') {
+            steps {
+                sh """
+                    echo "[+] Formatting logs for Loki"
+                    python3 scripts/format_for_loki.py --in ${WORKSPACE_DIR}/priority.json --out ${WORKSPACE_DIR}/loki_payload.json
+                """
+            }
+        }
+
+        stage('Stage 5: Push Logs to Loki') {
+            steps {
+                sh """
+                    echo "[+] Sending logs to Loki API"
+                    curl -X POST -H "Content-Type: application/json" \\
+                        -d @${WORKSPACE_DIR}/loki_payload.json ${LOKI_URL}
+                """
+            }
+        }
+
+        stage('Stage 6: Store Metadata in MongoDB Atlas') {
+            steps {
+                sh """
+                    echo "[+] Storing metadata into MongoDB Atlas"
+                    python3 scripts/store_metadata.py \\
+                        --mongo-uri "${MONGO_URI}" \\
+                        --in ${WORKSPACE_DIR}/priority.json
+                """
+            }
+        }
+
+        stage('Stage 7: Visualization') {
+            steps {
+                sh """
+                    echo "[+] Visualization available in Grafana + Loki dashboards"
+                    echo "[+] MongoDB Atlas can be queried for metadata insights"
+                """
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: "${WORKSPACE_DIR}/*.json", fingerprint: true
+        }
+    }
+}
+
+
+
+
+
+                                                         
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+
+
+
+
+
+
+
+
+
+
+      
     stage('Prioritize Artifacts') {
       agent { label 'agent' }
       steps {

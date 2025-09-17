@@ -37,6 +37,8 @@ pipeline {
         stage('Format Logs for Loki') {
             agent { label 'master' }  
             steps {
+                unstash 'artifacts'
+                archiveArtifacts artifacts: 'output/**', fingerprint: true                
                 sh """
                     unstash 'artifacts'
                     archiveArtifacts artifacts: 'output/**', fingerprint: true

@@ -2,7 +2,6 @@
 pipeline {
     agent { label 'agent' }
     environment {
-    WORKSPACE_DIR = "${env.WORKSPACE}/output"
     DB_PATH       = "${env.WORKSPACE}/output/metadata.db"
     GRAFANA_FORENSIC_DIR = "/var/lib/grafana/forensic"
     }
@@ -17,14 +16,9 @@ pipeline {
 
     stage('Deploy Agent Script & Ensure Target Dir') {
       steps {
-         withCredentials([
-             string(credentialsId: 'TARGET_IP', variable: 'TARGET_IP'),
-             string(credentialsId: 'SSH_CRED_ID', variable: 'SSH_CRED_ID')
-               ]) {
-                 withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CRED_ID}", keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
       sh '''
         echo "Creating target forensic dir..."
-        mkdir -p /home/$SSH_USER/forensic/output && chmod -R 700 /home/$SSH_USER/forensic || true
+        mkdir -p /home/jenkins/forensic/output && chmod -R 700 /home/jenkins/forensic || true
 
         echo "Copying agent to target..."
         scripts/collect_agent.py
@@ -34,9 +28,6 @@ pipeline {
       '''
     }
   }
-      }
-    }
-
     stage('Run Agent on Target (collect live data)') {
       steps {
         withCredentials([

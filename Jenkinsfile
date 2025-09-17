@@ -17,6 +17,7 @@ pipeline {
         chmod -R 700 /home/jenkins/workspace/ || true
         echo "Copying agent to target..."
         scripts/collect_agent.py
+        sh 'python3 scripts/prioritize.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/priority_list.json'
       '''
     }
   }
@@ -33,7 +34,6 @@ pipeline {
         sh 'python3 scripts/split_formatted_logs.py'
       }
     }  
-
     stage('Archive artifacts') {
       agent { label 'agent' }  
       steps {
@@ -46,10 +46,8 @@ pipeline {
       steps {
         unstash 'artifacts'
         archiveArtifacts artifacts: 'output/**', fingerprint: true
-        // archiveArtifacts artifacts: "${WORKSPACE_DIR}/*.json", fingerprint: true
       }
     }    
-      
         stage('Stage 4: Format Logs for Loki') {
             agent { label 'master' }  
             steps {
@@ -59,26 +57,21 @@ pipeline {
                 """
             }
         }
-
         stage('Stage 5: Push Logs to Loki') {
             agent { label 'master' }  
             steps {
                 sh """
                     echo "[+] Sending logs to Loki API"
-                    curl -X POST -H "Content-Type: application/json" \\
-                        -d @${MASTER_WORKSPACE_DIR}/output/loki_payload.json ${LOKI_URL}
+                    curl -X POST -H "Content-Type: application/json" -d @${MASTER_WORKSPACE_DIR}/output/loki_payload.json ${LOKI_URL}
                 """
             }
         }
-
         stage('Stage 6: Store Metadata in MongoDB Atlas') {
             agent { label 'master' }   
             steps {
                 sh """
                     echo "[+] Storing metadata into MongoDB Atlas"
-                    python3 scripts/store_metadata.py \\
-                        --mongo-uri "${MONGO_URI}" \\
-                        --in ${WORKSPACE_DIR}/priority.json
+                    python3 scripts/store_metadata.py --mongo-uri "${MONGO_URI}" --in ${MASTER_WORKSPACE_DIR}/output/priority.json
                 """
             }
         }

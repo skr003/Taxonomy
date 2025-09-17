@@ -76,13 +76,10 @@ pipeline {
             steps {
                 sh """
                     echo "[+] Storing metadata into MongoDB Atlas"
-                    python3 scripts/store_metadata.py \\
-                        --mongo-uri "${MONGO_URI}" \\
-                        --in ${WORKSPACE_DIR}/priority.json
+                    python3 scripts/store_metadata.py --mongo-uri "${MONGO_URI}" --in ${MASTER_WORKSPACE_DIR}/output/priority.json
                 """
             }
         }
-
         stage('Stage 7: Visualization') {
             agent { label 'master' }  
             steps {

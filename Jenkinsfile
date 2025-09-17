@@ -24,7 +24,7 @@ pipeline {
       }
     }
 
-    stage('Format Logs') {
+    stage('Format and Split Logs') {
         agent { label 'agent' }
         steps {
         sh 'python3 scripts/format_json.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/formatted_logs.json'
@@ -32,14 +32,14 @@ pipeline {
       }
     }  
 
-    stage('Store Metadata') {
+    stage('Archive artifacts') {
       agent { label 'agent' }  
       steps {
         stash name: 'artifacts', includes: 'output/**'
         //archiveArtifacts artifacts: 'output/**', fingerprint: true
       }
     }
-    stage('Copy to Master') {
+    stage('Copy artifacts to Master') {
       agent { label 'master' }  
       steps {
         unstash 'artifacts'
@@ -49,6 +49,7 @@ pipeline {
     }      
 
     stage('Upload Reports to Azure Storage') {
+      agent { label 'master' }    
       steps {
             script {
             withCredentials([
@@ -58,23 +59,8 @@ pipeline {
                 # Set variables - REPLACE WITH YOUR ACTUAL STORAGE KEY
                 STORAGE_ACCOUNT="taxonomystorage123"
                 CONTAINER="reports"
-
                 az storage blob upload-batch --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "reports/builds/$BUILD_NUMBER" --source output --overwrite
                 az storage blob upload-batch --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "reports/latest" --source output --overwrite
-
-
-                #for f in forensic_workspace/*.json; do
-                #    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "builds/$BUILD_NUMBER/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-                #    az storage blob upload --account-name $STORAGE_ACCOUNT --container-name $CONTAINER --file "$f" --name "latest/$fname" --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite                    
-                #done
-          
-                # Upload to build-specific path
-                #az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/$fname" --file "$f"--account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-                #az storage blob upload --container-name $CONTAINER --name "builds/$BUILD_NUMBER/formatted_logs.json" --file forensic_workspace/formatted_logs.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-
-                # Upload to 'latest' path
-                #az storage blob upload --container-name $CONTAINER --name "latest/$fname" --file "$f" --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
-                #az storage blob upload --container-name $CONTAINER --name "latest/formatted_logs.json" --file forensic_workspace/formatted_logs.json --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --overwrite
                 '''
             }  
       }

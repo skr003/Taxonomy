@@ -1,7 +1,7 @@
 pipeline {
     agent none
     environment {
-    AGENT_WORKSPACE_DIR = "/home/jenkins/workspace/Taxonomy_NEW"
+    WORKSPACE_DIR = "/home/jenkins/workspace/Taxonomy_NEW"
     MASTER_WORKSPACE_DIR = "/var/lib/jenkins/workspace/Taxonomy_NEW"
     DB_PATH       = "/home/jenkins/workspace/Taxonomy_NEW/output/metadata.db"
     GRAFANA_FORENSIC_DIR = "/var/lib/grafana/forensic"
@@ -23,13 +23,13 @@ pipeline {
     stage('Prioritize Artifacts') {
       agent { label 'agent' }
       steps {
-        sh 'python3 scripts/prioritize.py --in /output/artifacts.json --out ${AGENT_WORKSPACE_DIR}/output/priority_list.json'
+        sh 'python3 scripts/prioritize.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/priority_list.json'
       }
     }
     stage('Format and Split Logs') {
         agent { label 'agent' }
         steps {
-        sh 'python3 scripts/format_json.py --in ${AGENT_WORKSPACE_DIR}/output/artifacts.json --out ${AGENT_WORKSPACE_DIR}/output/formatted_logs.json'
+        sh 'python3 scripts/format_json.py --in ${WORKSPACE_DIR}/output/artifacts.json --out ${WORKSPACE_DIR}/output/formatted_logs.json'
         sh 'python3 scripts/split_formatted_logs.py'
       }
     }  
@@ -46,7 +46,7 @@ pipeline {
       steps {
         unstash 'artifacts'
         archiveArtifacts artifacts: 'output/**', fingerprint: true
-        // archiveArtifacts artifacts: "${MASTER_WORKSPACE_DIR}/*.json", fingerprint: true
+        // archiveArtifacts artifacts: "${WORKSPACE_DIR}/*.json", fingerprint: true
       }
     }    
       
@@ -66,7 +66,7 @@ pipeline {
                 sh """
                     echo "[+] Sending logs to Loki API"
                     curl -X POST -H "Content-Type: application/json" \\
-                        -d @${MASTER_WORKSPACE_DIR}/loki_payload.json ${LOKI_URL}
+                        -d @${WORKSPACE_DIR}/loki_payload.json ${LOKI_URL}
                 """
             }
         }
@@ -78,7 +78,7 @@ pipeline {
                     echo "[+] Storing metadata into MongoDB Atlas"
                     python3 scripts/store_metadata.py \\
                         --mongo-uri "${MONGO_URI}" \\
-                        --in ${MASTER_WORKSPACE_DIR}/priority.json
+                        --in ${WORKSPACE_DIR}/priority.json
                 """
             }
         }

@@ -37,7 +37,7 @@ pipeline {
       steps {
         sh 'python3 scripts/store_metadata.py --db ${DB_PATH} --meta ${WORKSPACE_DIR}/output/priority_list.json'
         stash name: 'artifacts', includes: '${WORKSPACE_DIR}/output/**'
-        archiveArtifacts artifacts: 'output/**', fingerprint: true
+        //archiveArtifacts artifacts: 'output/**', fingerprint: true
 
       }
     }

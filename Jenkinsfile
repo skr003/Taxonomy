@@ -24,13 +24,13 @@ pipeline {
                  withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CRED_ID}", keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
       sh '''
         echo "Creating target forensic dir..."
-        ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "mkdir -p /home/$SSH_USER/forensic/output && chmod -R 700 /home/$SSH_USER/forensic || true"
+        mkdir -p /home/$SSH_USER/forensic/output && chmod -R 700 /home/$SSH_USER/forensic || true
 
         echo "Copying agent to target..."
-        scp -i $SSH_KEY -o StrictHostKeyChecking=no scripts/collect_agent.py $SSH_USER@$TARGET_IP:/home/$SSH_USER/forensic/collect_agent.py
+        scripts/collect_agent.py
 
         echo "Making agent executable..."
-        ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$TARGET_IP "chmod +x /home/$SSH_USER/forensic/collect_agent.py"
+        chmod +x forensic/collect_agent.py
       '''
     }
   }

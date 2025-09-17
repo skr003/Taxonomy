@@ -31,7 +31,7 @@ pipeline {
 
     stage('Store Metadata') {
       steps {
-        sh 'python3 scripts/store_metadata.py --db ${DB_PATH} --meta ${WORKSPACE_DIR}/priority_list.json'
+        sh 'python3 scripts/store_metadata.py --db ${DB_PATH} --meta ${WORKSPACE_DIR}/output/priority_list.json'
         archiveArtifacts artifacts: 'output/**', fingerprint: true
 
       }

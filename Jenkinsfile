@@ -33,14 +33,7 @@ pipeline {
         sh 'python3 scripts/split_formatted_logs.py'
         stash name: 'artifacts', includes: 'output/**'    
       }
-    }  
-    stage('Copy artifacts to Master') {
-      agent { label 'master' }  
-      steps {
-        unstash 'artifacts'
-        archiveArtifacts artifacts: 'output/**', fingerprint: true
-      }
-    }    
+    }   
         stage('Format Logs for Loki') {
             agent { label 'master' }  
             steps {

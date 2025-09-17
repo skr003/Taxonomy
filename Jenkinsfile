@@ -2,8 +2,8 @@
 pipeline {
     agent none
     environment {
-    WORKSPACE_DIR = "${env.WORKSPACE}"
-    DB_PATH       = "${env.WORKSPACE}/output/metadata.db"
+    WORKSPACE_DIR = "/home/jenkins/workspace/Taxonomy_NEW"
+    DB_PATH       = "/home/jenkins/workspace/Taxonomy_NEW/output/metadata.db"
     GRAFANA_FORENSIC_DIR = "/var/lib/grafana/forensic"
     }
   stages {

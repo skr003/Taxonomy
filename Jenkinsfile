@@ -18,6 +18,8 @@ pipeline {
       steps {
       sh '''
         echo "Creating target forensic dir..."
+        ls
+        pwd
         mkdir -p /home/jenkins/forensic/output && chmod -R 700 /home/jenkins/forensic || true
 
         echo "Copying agent to target..."

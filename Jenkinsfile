@@ -33,7 +33,6 @@ pipeline {
         sh 'python3 scripts/split_formatted_logs.py'
       }
     }  
-
     stage('Archive artifacts') {
       agent { label 'agent' }  
       steps {
@@ -46,11 +45,9 @@ pipeline {
       steps {
         unstash 'artifacts'
         archiveArtifacts artifacts: 'output/**', fingerprint: true
-        // archiveArtifacts artifacts: "${WORKSPACE_DIR}/*.json", fingerprint: true
       }
     }    
-      
-        stage('Stage 4: Format Logs for Loki') {
+        stage('Format Logs for Loki') {
             agent { label 'master' }  
             steps {
                 sh """
@@ -59,8 +56,7 @@ pipeline {
                 """
             }
         }
-
-        stage('Stage 5: Push Logs to Loki') {
+        stage('Push Logs to Loki') {
             agent { label 'master' }  
             steps {
                 sh """
@@ -70,8 +66,7 @@ pipeline {
                 """
             }
         }
-
-        stage('Stage 6: Store Metadata in MongoDB Atlas') {
+        stage('Store Metadata in MongoDB Atlas') {
             agent { label 'master' }   
             steps {
                 sh """
@@ -80,7 +75,7 @@ pipeline {
                 """
             }
         }
-        stage('Stage 7: Visualization') {
+        stage('Visualization') {
             agent { label 'master' }  
             steps {
                 sh """
@@ -89,7 +84,6 @@ pipeline {
                 """
             }
         }
-      
     stage('Upload Reports to Azure Storage') {
       agent { label 'master' }    
       steps {

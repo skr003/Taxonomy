@@ -45,9 +45,11 @@ pipeline {
                     #for f in ${MASTER_WORKSPACE_DIR}/output/split_logs/*.json; do out=${MASTER_WORKSPACE_DIR}/$(basename $f .json)_loki.json python3 scripts/format_for_loki.py --in $f --out $out
                     #done
                     for f in ${MASTER_WORKSPACE_DIR}/output/split_logs/*.json; do
-                         out=${MASTER_WORKSPACE_DIR}/output/$(basename $f .json)_loki.json
-                         python3 scripts/format_for_loki.py --in $f --out $out
-                    done
+                        base=$(basename "$f" .json)
+                        out="${MASTER_WORKSPACE_DIR}/output//${base}_loki.json"
+                        echo "[+] Formatting $f -> $out"
+                        python3 scripts/format_for_loki.py --in "$f" --out "$out"
+                    done 
                 '''
             }
         }

@@ -63,16 +63,16 @@ pipeline {
                    '''
             }
         }
-        // stage('Push to MongoDB') {
-        //     agent { label 'master' }             
-        //     steps {
-        //         withCredentials([string(credentialsId: 'mongo-atlas-secret', variable: 'MONGO_URI')]) {
-        //             sh '''
-        //             python3 scripts/push_to_mongo.py --in-dir output/mongo_logs --mongo-uri $MONGO_URI --db TaxonomyDB --collection Artifacts
-        //             '''
-        //         }
-        //     }
-        // }
+        stage('Push to MongoDB') {
+            agent { label 'master' }             
+            steps {
+                withCredentials([string(credentialsId: 'mongo-atlas-secret', variable: 'MONGO_URI')]) {
+                    sh '''
+                    python3 scripts/push_to_mongo.py --in-dir output/mongo_logs --mongo-uri $MONGO_URI --db TaxonomyDB --collection Artifacts
+                    '''
+                }
+            }
+        }
         stage('Visualization') {
             agent { label 'master' }  
             steps {

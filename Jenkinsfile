@@ -34,7 +34,7 @@ pipeline {
         stash name: 'artifacts', includes: 'output/**'    
       }
     }   
-        stage('Format Logs for Loki') {
+        stage('Format Logs for Loki and MongoDB') {
             agent { label 'master' }  
             steps {
                 unstash 'artifacts'

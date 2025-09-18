@@ -9,20 +9,29 @@ def push_file(client, db_name, collection_name, filepath):
     with open(filepath) as f:
         data = json.load(f)
 
-    # If it's too large, split items
+    # If file has multiple items, insert them individually
     if isinstance(data, dict) and "items" in data:
-        batch_size = 500  # adjust to keep under 16MB
-        items = data["items"]
-        for i in range(0, len(items), batch_size):
-            chunk = {
+        docs = []
+        for item in data["items"]:
+            doc = {
                 "category": data.get("category"),
                 "timestamp": data.get("timestamp"),
-                "count": len(items[i:i+batch_size]),
-                "items": items[i:i+batch_size]
+                "item": item
             }
-            collection.insert_one(chunk)
-            print(f"[+] Inserted chunk {i//batch_size + 1} from {os.path.basename(filepath)}")
+            docs.append(doc)
+
+            # Insert in batches to avoid memory issues
+            if len(docs) >= 500:  # batch size
+                collection.insert_many(docs)
+                print(f"[+] Inserted batch of {len(docs)} from {os.path.basename(filepath)}")
+                docs = []
+
+        if docs:
+            collection.insert_many(docs)
+            print(f"[+] Inserted final {len(docs)} docs from {os.path.basename(filepath)}")
+
     else:
+        # Insert the whole thing if small enough
         collection.insert_one(data)
         print(f"[+] Inserted {os.path.basename(filepath)} into {db_name}.{collection_name}")
 

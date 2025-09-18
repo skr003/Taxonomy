@@ -46,7 +46,6 @@ pipeline {
                     python3 scripts/format_for_loki.py --in $file --out-dir output/loki_logs
                 done
                 '''
-                    #python3 scripts/format_for_mongo.py --in $file --out-dir output/mongo_logs                
             }
         }
 

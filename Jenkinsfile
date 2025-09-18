@@ -34,44 +34,88 @@ pipeline {
         stash name: 'artifacts', includes: 'output/**'    
       }
     }   
-        stage('Format Logs for Loki and MongoDB') {
-            agent { label 'master' }  
+
+
+        stage('Format Logs') {
+            agent { label 'master' } 
             steps {
-                unstash 'artifacts'
-                archiveArtifacts artifacts: 'output/**', fingerprint: true                
-                sh '''
-                    mkdir -p ${MASTER_WORKSPACE_DIR}/output/loki_logs
-                    echo "[+] Formatting logs for Loki"
-                    for f in ${MASTER_WORKSPACE_DIR}/output/split_logs/*.json; do
-                         base=$(basename "$f" .json)
-                         out="${MASTER_WORKSPACE_DIR}/output/loki_logs/${base}_loki.json"
-                         echo "[+] Formatting $f -> $out"
-                         python3 scripts/format_for_loki.py --in "$f" --out "$out"
-                    done 
-                '''
-                archiveArtifacts artifacts: 'output/**', fingerprint: true                
+                sh """
+                mkdir -p output/loki_logs output/mongo_logs
+                for file in split_logs/*.json; do
+                    echo "[+] Processing $file"
+                    python3 scripts/format_for_loki.py --in $file --out-dir output/loki_logs
+                    python3 scripts/format_for_mongo.py --in $file --out-dir output/mongo_logs
+                done
+                """
             }
         }
-        stage('Push Logs to Loki') {
-            agent { label 'master' }              
+
+        stage('Push to Loki') {
+            agent { label 'master' }             
             steps {
-                 sh '''
-                      for f in ${WORKSPACE}/output/loki_logs/*_loki.json; do
-                           echo "[+] Pushing $f to Loki..."
-                           python3 scripts/push_to_loki.py --in "$f" --loki-url ${LOKI_URL}
-                      done
-                 '''
+                sh """
+                for file in output/loki_logs/*.json; do
+                    echo "[+] Pushing $file to Loki..."
+                    curl -s -X POST -H "Content-Type: application/json" \
+                        --data-binary @$file \
+                        http://172.16.0.4:3100/loki/api/v1/push || true
+                done
+                """
             }
         }
         stage('Push to MongoDB') {
-            agent { label 'master' }              
+            agent { label 'master' }             
             steps {
-                  withCredentials([string(credentialsId: 'mongo-atlas-secret', variable: 'MONGO_URI')]) {
-                  // sh 'python3 scripts/push_to_mongo.py --mongo-uri "$MONGO_URI" --db "TaxonomyDB" --collection "Artifacts" --in-dir "${WORKSPACE}/output/loki_logs"'
-                  sh 'python3 scripts/push_to_mongo.py --mongo-uri "$MONGO_URI" --db TaxonomyDB --collection Artifacts --in-dir output/mongo_logs'    
-                  }
+                withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
+                    sh """
+                    python3 scripts/push_to_mongo.py \
+                        --mongo-uri "$MONGO_URI" \
+                        --db TaxonomyDB \
+                        --collection Artifacts \
+                        --in-dir output/mongo_logs
+                    """
+                }
             }
         }
+#################################################################
+        // stage('Format Logs for Loki and MongoDB') {
+        //     agent { label 'master' }  
+        //     steps {
+        //         unstash 'artifacts'
+        //         archiveArtifacts artifacts: 'output/**', fingerprint: true                
+        //         sh '''
+        //             mkdir -p ${MASTER_WORKSPACE_DIR}/output/loki_logs
+        //             echo "[+] Formatting logs for Loki"
+        //             for f in ${MASTER_WORKSPACE_DIR}/output/split_logs/*.json; do
+        //                  base=$(basename "$f" .json)
+        //                  out="${MASTER_WORKSPACE_DIR}/output/loki_logs/${base}_loki.json"
+        //                  echo "[+] Formatting $f -> $out"
+        //                  python3 scripts/format_for_loki.py --in "$f" --out "$out"
+        //             done 
+        //         '''
+        //         archiveArtifacts artifacts: 'output/**', fingerprint: true                
+        //     }
+        // }
+        // stage('Push Logs to Loki') {
+        //     agent { label 'master' }              
+        //     steps {
+        //          sh '''
+        //               for f in ${WORKSPACE}/output/loki_logs/*_loki.json; do
+        //                    echo "[+] Pushing $f to Loki..."
+        //                    python3 scripts/push_to_loki.py --in "$f" --loki-url ${LOKI_URL}
+        //               done
+        //          '''
+        //     }
+        // }
+        // stage('Push to MongoDB') {
+        //     agent { label 'master' }              
+        //     steps {
+        //           withCredentials([string(credentialsId: 'mongo-atlas-secret', variable: 'MONGO_URI')]) {
+        //           // sh 'python3 scripts/push_to_mongo.py --mongo-uri "$MONGO_URI" --db "TaxonomyDB" --collection "Artifacts" --in-dir "${WORKSPACE}/output/loki_logs"'
+        //           sh 'python3 scripts/push_to_mongo.py --mongo-uri "$MONGO_URI" --db TaxonomyDB --collection Artifacts --in-dir output/mongo_logs'    
+        //           }
+        //     }
+        // }
         stage('Visualization') {
             agent { label 'master' }  
             steps {

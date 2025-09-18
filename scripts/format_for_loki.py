@@ -1,32 +1,55 @@
-import json, argparse, time, uuid
+#!/usr/bin/env python3
+import argparse
+import json
+from datetime import datetime
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Convert split log JSON into Loki payload")
+    parser.add_argument("--in", dest="input", required=True, help="Input JSON file")
+    parser.add_argument("--out", dest="output", required=True, help="Output Loki payload file")
+    return parser.parse_args()
+
+def to_nanos(ts: str) -> str:
+    """Convert ISO8601 timestamp string to nanoseconds"""
+    dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    return str(int(dt.timestamp() * 1e9))
+
+def convert_to_loki(data):
+    streams = []
+    timestamp = to_nanos(data.get("timestamp"))
+
+    for item in data.get("items", []):
+        # Loki labels
+        labels = {
+            "category": data.get("category", "unknown"),
+            "id": item.get("id", "no-id"),
+            "type": item.get("type", "na"),
+            "tag": item.get("meta", {}).get("tag", "na"),
+            "status": item.get("meta", {}).get("status", "na"),
+        }
+
+        # The actual log line (store full item JSON)
+        log_line = json.dumps(item, ensure_ascii=False)
+
+        streams.append({
+            "stream": labels,
+            "values": [[timestamp, log_line]]
+        })
+
+    return {"streams": streams}
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--in", dest="input", required=True)
-    parser.add_argument("--out", dest="output", required=True)
-    args = parser.parse_args()
+    args = parse_args()
 
-    with open(args.input) as f:
+    with open(args.input, "r") as f:
         data = json.load(f)
 
-    case_id = data.get("case_id", str(uuid.uuid4()))
-    logs = []
-
-    for artifact in data.get("priority_list", []):
-        logs.append([
-            str(int(time.time() * 1e9)),
-            json.dumps(artifact)
-        ])
-
-    loki_payload = [
-        {
-            "stream": {"job": "forensic_pipeline", "case_id": case_id},
-            "values": logs
-        }
-    ]
+    payload = convert_to_loki(data)
 
     with open(args.output, "w") as f:
-        json.dump(loki_payload, f, indent=2)
+        json.dump(payload, f, indent=2)
+
+    print(f"[+] Loki payload written to {args.output}")
 
 if __name__ == "__main__":
     main()

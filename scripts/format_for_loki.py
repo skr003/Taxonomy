@@ -1,44 +1,30 @@
-#!/usr/bin/env python3
-import argparse
-import json
-import os
-import sys
+import json, time, uuid
 
-def load_priority_file(path):
-    with open(path, "r") as f:
-        return json.load(f)
+def main():
+    with open("output/priority_list.json") as f:
+        data = json.load(f)
 
-def to_loki_payload(data):
-    # Convert priority.json data into Loki push format
-    streams = []
-    for artifact in data.get("artifacts", []):
-        stream = {
+    case_id = data.get("case_id", str(uuid.uuid4()))
+    logs = []
+
+    for i, artifact in enumerate(data.get("priority_list", [])):
+        logs.append([
+            str(int(time.time() * 1e9)),  # nanoseconds timestamp
+            f"[PRIORITY {i}] {artifact}"
+        ])
+
+    loki_payload = [
+        {
             "stream": {
-                "component": artifact.get("component", "unknown"),
-                "path": artifact.get("path", ""),
-                "priority": str(artifact.get("priority", ""))
+                "job": "forensics",
+                "case_id": case_id
             },
-            "values": [
-                [str(int(artifact.get("timestamp", 0) * 1e9)), json.dumps(artifact)]
-            ]
+            "values": logs
         }
-        streams.append(stream)
-    return {"streams": streams}
+    ]
+
+    with open("output/loki_payload.json", "w") as out:
+        json.dump(loki_payload, out, indent=2)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--in", dest="input", required=True, help="/var/lib/jenkins/workspace/Taxonomy_NEW/output/priority_list.json")
-    parser.add_argument("--out", dest="output", required=True, help="/var/lib/jenkins/workspace/Taxonomy_NEW/output/loki_payload.json")
-    args = parser.parse_args()
-
-    if not os.path.exists(args.input):
-        print(f"[!] Input file not found: {args.input}")
-        sys.exit(1)
-
-    data = load_priority_file(args.input)
-    payload = to_loki_payload(data)
-
-    with open(args.output, "w") as f:
-        json.dump(payload, f, indent=2)
-
-    print(f"[+] Loki payload written to {args.output}")
+    main()

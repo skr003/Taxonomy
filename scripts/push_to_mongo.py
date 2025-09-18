@@ -1,89 +1,47 @@
+#!/usr/bin/env python3
 import os
 import json
 import argparse
 from pymongo import MongoClient
-import gridfs
-from bson import BSON
-from bson.errors import InvalidDocument
+from urllib.parse import quote_plus
 
-
-MAX_BSON_SIZE = 16_000_000  # MongoDB hard limit (~16MB)
-
-
-def is_too_large(doc):
-    """Check if a document exceeds BSON max size."""
-    try:
-        return len(BSON.encode(doc)) > MAX_BSON_SIZE
-    except InvalidDocument:
-        return True
-
-
-def push_file(client, db_name, collection_name, filepath):
+def push_to_mongo(mongo_uri, db_name, collection_name, input_dir):
+    client = MongoClient(mongo_uri)
     db = client[db_name]
     collection = db[collection_name]
-    fs = gridfs.GridFS(db, collection="Artifacts_raw")
 
-    with open(filepath) as f:
-        data = json.load(f)
+    print(f"[!] Dropping database '{db_name}' before inserting new logs...")
+    client.drop_database(db_name)
 
-    filename = os.path.basename(filepath)
+    inserted = 0
+    for file in os.listdir(input_dir):
+        if not file.endswith(".json"):
+            continue
+        file_path = os.path.join(input_dir, file)
+        with open(file_path, "r") as f:
+            data = json.load(f)
 
-    # Case 1: If entire doc fits → insert directly
-    if not is_too_large(data):
-        collection.insert_one(data)
-        print(f"[+] Inserted {filename} as single doc into {db_name}.{collection_name}")
-        return
+        # If file contains multiple docs, insert_many; else insert_one
+        if isinstance(data, list):
+            collection.insert_many(data)
+            print(f"[+] Inserted {len(data)} docs from {file}")
+            inserted += len(data)
+        else:
+            collection.insert_one(data)
+            print(f"[+] Inserted 1 doc from {file}")
+            inserted += 1
 
-    # Case 2: If "items" exists, try splitting into smaller docs
-    if isinstance(data, dict) and "items" in data:
-        items = data["items"]
-        batch = []
-        for item in items:
-            doc = {
-                "category": data.get("category"),
-                "timestamp": data.get("timestamp"),
-                "item": item
-            }
-            if is_too_large(doc):
-                # Case 3: If even single item too large → fallback to GridFS
-                print(f"[!] Oversized item in {filename}, storing in GridFS...")
-                fs.put(json.dumps(item).encode("utf-8"),
-                       filename=f"{filename}_oversized_item.json")
-            else:
-                batch.append(doc)
-
-                if len(batch) >= 500:  # batch insert
-                    collection.insert_many(batch)
-                    print(f"[+] Inserted batch of {len(batch)} from {filename}")
-                    batch = []
-
-        if batch:
-            collection.insert_many(batch)
-            print(f"[+] Inserted final {len(batch)} docs from {filename}")
-        return
-
-    # Case 3: Fallback → Store whole file in GridFS
-    print(f"[!] {filename} too large, storing in GridFS...")
-    with open(filepath, "rb") as f:
-        fs.put(f, filename=filename)
-    print(f"[+] Stored {filename} in GridFS collection 'Artifacts_raw'")
-
+    print(f"[✓] Completed pushing logs: {inserted} documents inserted.")
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mongo-uri", required=True)
-    parser.add_argument("--db", required=True)
-    parser.add_argument("--collection", required=True)
-    parser.add_argument("--in-dir", required=True)
+    parser.add_argument("--mongo-uri", required=True, help="MongoDB connection URI")
+    parser.add_argument("--db", required=True, help="Database name")
+    parser.add_argument("--collection", required=True, help="Collection name")
+    parser.add_argument("--in-dir", required=True, help="Directory with JSON logs")
     args = parser.parse_args()
 
-    client = MongoClient(args.mongo_uri)
-
-    for file in os.listdir(args.in_dir):
-        if file.endswith("_mongo.json"):
-            push_file(client, args.db, args.collection,
-                      os.path.join(args.in_dir, file))
-
+    push_to_mongo(args.mongo_uri, args.db, args.collection, args.in_dir)
 
 if __name__ == "__main__":
     main()

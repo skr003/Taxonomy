@@ -42,25 +42,14 @@ pipeline {
                 sh '''
                     mkdir ${MASTER_WORKSPACE_DIR}/output/loki_logs/
                     echo "[+] Formatting logs for Loki"
-                    # python3 scripts/format_for_loki.py --in ${MASTER_WORKSPACE_DIR}/output/priority_list.json --out ${MASTER_WORKSPACE_DIR}/output/loki_payload.json
-                    #for f in ${MASTER_WORKSPACE_DIR}/output/split_logs/*.json; do out=${MASTER_WORKSPACE_DIR}/$(basename $f .json)_loki.json python3 scripts/format_for_loki.py --in $f --out $out
-                    #done
-                    for f in ${MASTER_WORKSPACE_DIR}/output/split_logs/*.json; do
-                        base=$(basename "$f" .json)
-                        out="${MASTER_WORKSPACE_DIR}/output/loki_logs/${base}_loki.json"
-                        echo "[+] Formatting $f -> $out"
-                        python3 scripts/format_for_loki.py --in "$f" --out "$out"
-                    done 
                     for f in ${MASTER_WORKSPACE_DIR}/output/split_logs/*.json; do
                          base=$(basename "$f" .json)
                          out="${MASTER_WORKSPACE_DIR}/output/loki_logs/${base}_loki.json"
                          echo "[+] Formatting $f -> $out"
                          python3 scripts/format_for_loki.py --in "$f" --out "$out"
-                    done
-
-
-                    
+                    done 
                 '''
+                archiveArtifacts artifacts: 'output/**', fingerprint: true                
             }
         }
         stage('Push Logs to Loki') {

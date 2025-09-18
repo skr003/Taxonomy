@@ -53,14 +53,13 @@ pipeline {
             }
         }
         stage('Push Logs to Loki') {
-            agent { label 'master' }  
             steps {
-                sh """
-                for f in ${WORKSPACE}/output/loki_logs/*_loki.json; do
-                     echo "[+] Pushing $f to Loki..."
-                     python3 scripts/push_to_loki.py --in "$f" --url "http://localhost:3100/loki/api/v1/push"
-                done
-                '''
+                 sh '''
+                      for f in ${WORKSPACE}/output/loki_logs/*_loki.json; do
+                           echo "[+] Pushing $f to Loki..."
+                           python3 scripts/push_to_loki.py --in "$f" --url "http://localhost:3100/loki/api/v1/push"
+                      done
+                 '''
             }
         }
         // stage('Store Metadata in MongoDB Atlas') {

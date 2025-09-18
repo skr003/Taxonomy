@@ -2,21 +2,33 @@
 import argparse
 import json
 import requests
+import sys
 
-def push_to_loki(loki_url, payload_file):
-    with open(payload_file, "r") as f:
+def parse_args():
+    parser = argparse.ArgumentParser(description="Push Loki payload JSON to Loki API")
+    parser.add_argument("--in", dest="input", required=True, help="Input Loki payload JSON file")
+    parser.add_argument("--url", dest="url", required=True, help="Loki API endpoint")
+    return parser.parse_args()
+
+def push_to_loki(file_path, url):
+    with open(file_path, "r") as f:
         payload = json.load(f)
+
     headers = {"Content-Type": "application/json"}
-    r = requests.post(loki_url, headers=headers, json=payload)
-    if r.status_code == 204:
-        print("[+] Logs successfully pushed to Loki")
-    else:
-        print(f"[!] Failed to push logs: {r.status_code} {r.text}")
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=10)
+        if resp.status_code == 204:
+            print(f"[✓] Successfully pushed {file_path}")
+        else:
+            print(f"[!] Failed to push {file_path}: {resp.status_code} {resp.text}")
+            sys.exit(1)
+    except Exception as e:
+        print(f"[!] Error pushing {file_path}: {e}")
+        sys.exit(1)
+
+def main():
+    args = parse_args()
+    push_to_loki(args.input, args.url)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--loki-url", required=True)
-    parser.add_argument("--in", dest="input", required=True)
-    args = parser.parse_args()
-
-    push_to_loki(args.loki_url, args.input)
+    main()

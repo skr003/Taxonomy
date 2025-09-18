@@ -63,52 +63,14 @@ pipeline {
                    '''
             }
         }
-        stage('Push to MongoDB') {
-            agent { label 'master' }             
-            steps {
-                withCredentials([string(credentialsId: 'mongo-atlas-secret', variable: 'MONGO_URI')]) {
-                    sh '''
-                    python3 scripts/push_to_mongo.py --in-dir output/mongo_logs --mongo-uri $MONGO_URI --db TaxonomyDB --collection Artifacts
-                    '''
-                }
-            }
-        }
-        // stage('Format Logs for Loki and MongoDB') {
-        //     agent { label 'master' }  
-        //     steps {
-        //         unstash 'artifacts'
-        //         archiveArtifacts artifacts: 'output/**', fingerprint: true                
-        //         sh '''
-        //             mkdir -p ${MASTER_WORKSPACE_DIR}/output/loki_logs
-        //             echo "[+] Formatting logs for Loki"
-        //             for f in ${MASTER_WORKSPACE_DIR}/output/split_logs/*.json; do
-        //                  base=$(basename "$f" .json)
-        //                  out="${MASTER_WORKSPACE_DIR}/output/loki_logs/${base}_loki.json"
-        //                  echo "[+] Formatting $f -> $out"
-        //                  python3 scripts/format_for_loki.py --in "$f" --out "$out"
-        //             done 
-        //         '''
-        //         archiveArtifacts artifacts: 'output/**', fingerprint: true                
-        //     }
-        // }
-        // stage('Push Logs to Loki') {
-        //     agent { label 'master' }              
-        //     steps {
-        //          sh '''
-        //               for f in ${WORKSPACE}/output/loki_logs/*_loki.json; do
-        //                    echo "[+] Pushing $f to Loki..."
-        //                    python3 scripts/push_to_loki.py --in "$f" --loki-url ${LOKI_URL}
-        //               done
-        //          '''
-        //     }
-        // }
         // stage('Push to MongoDB') {
-        //     agent { label 'master' }              
+        //     agent { label 'master' }             
         //     steps {
-        //           withCredentials([string(credentialsId: 'mongo-atlas-secret', variable: 'MONGO_URI')]) {
-        //           // sh 'python3 scripts/push_to_mongo.py --mongo-uri "$MONGO_URI" --db "TaxonomyDB" --collection "Artifacts" --in-dir "${WORKSPACE}/output/loki_logs"'
-        //           sh 'python3 scripts/push_to_mongo.py --mongo-uri "$MONGO_URI" --db TaxonomyDB --collection Artifacts --in-dir output/mongo_logs'    
-        //           }
+        //         withCredentials([string(credentialsId: 'mongo-atlas-secret', variable: 'MONGO_URI')]) {
+        //             sh '''
+        //             python3 scripts/push_to_mongo.py --in-dir output/mongo_logs --mongo-uri $MONGO_URI --db TaxonomyDB --collection Artifacts
+        //             '''
+        //         }
         //     }
         // }
         stage('Visualization') {

@@ -56,10 +56,11 @@ pipeline {
             agent { label 'master' }  
             steps {
                 sh """
-                    echo "[+] Sending logs to Loki API"
-                    curl -X POST -H "Content-Type: application/json" \\
-                        -d @${MASTER_WORKSPACE_DIR}/output/loki_payload.json ${LOKI_URL}
-                """
+                for f in ${WORKSPACE}/output/loki_logs/*_loki.json; do
+                     echo "[+] Pushing $f to Loki..."
+                     python3 scripts/push_to_loki.py --in "$f" --url "http://localhost:3100/loki/api/v1/push"
+                done
+                '''
             }
         }
         stage('Store Metadata in MongoDB Atlas') {

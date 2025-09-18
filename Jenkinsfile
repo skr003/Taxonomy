@@ -58,7 +58,7 @@ pipeline {
                  sh '''
                       for f in ${WORKSPACE}/output/loki_logs/*_loki.json; do
                            echo "[+] Pushing $f to Loki..."
-                           python3 scripts/push_to_loki.py --in "$f" --url ${LOKI_URL}
+                           python3 scripts/push_to_loki.py --in "$f" --loki-url ${LOKI_URL}
                       done
                  '''
             }

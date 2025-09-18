@@ -40,7 +40,6 @@ pipeline {
                 unstash 'artifacts'
                 archiveArtifacts artifacts: 'output/**', fingerprint: true                
                 sh '''
-                    mkdir ${MASTER_WORKSPACE_DIR}/output/loki_logs/
                     echo "[+] Formatting logs for Loki"
                     for f in ${MASTER_WORKSPACE_DIR}/output/split_logs/*.json; do
                          base=$(basename "$f" .json)

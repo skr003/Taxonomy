@@ -67,7 +67,8 @@ pipeline {
             agent { label 'master' }              
             steps {
                   withCredentials([string(credentialsId: 'mongo-atlas-secret', variable: 'MONGO_URI')]) {
-                  sh 'python3 scripts/push_to_mongo.py --mongo-uri "$MONGO_URI" --db "TaxonomyDB" --collection "Artifacts" --in-dir "${WORKSPACE}/output/loki_logs"'
+                  // sh 'python3 scripts/push_to_mongo.py --mongo-uri "$MONGO_URI" --db "TaxonomyDB" --collection "Artifacts" --in-dir "${WORKSPACE}/output/loki_logs"'
+                  sh 'python3 scripts/push_to_mongo.py --mongo-uri "$MONGO_URI" --db TaxonomyDB --collection Artifacts --in-dir output/mongo_logs'    
                   }
             }
         }

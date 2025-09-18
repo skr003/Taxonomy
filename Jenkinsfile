@@ -65,7 +65,7 @@ pipeline {
         }
         stage('Push to MongoDB') {
             steps {
-                  withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
+                  withCredentials([string(credentialsId: 'mongo-atlas-secret', variable: 'MONGO_URI')]) {
                   sh 'python3 scripts/push_to_mongo.py --mongo-uri "$MONGO_URI" --db "TaxonomyDB" --collection "Artifacts" --in-dir "${WORKSPACE}/output/loki_logs"'
                   }
             }

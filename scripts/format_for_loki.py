@@ -1,79 +1,65 @@
 #!/usr/bin/env python3
-import argparse
-import json
 import os
-from datetime import datetime
+import json
+import argparse
+import time
 
-MAX_LOKI_ENTRY = 250000  # 250 KB safety limit
+MAX_ENTRY_SIZE = 250 * 1024  # 250KB safe for Loki entries
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Convert split log JSON into Loki payload")
-    parser.add_argument("--in", dest="input", required=True, help="Input JSON file")
-    parser.add_argument("--out", dest="output", required=True, help="Output Loki payload file")
-    return parser.parse_args()
+def chunk_items(items, max_size=MAX_ENTRY_SIZE):
+    """Split items[] into chunks under Loki entry size limit."""
+    chunk, size = [], 0
+    for item in items:
+        item_str = json.dumps(item)
+        item_size = len(item_str.encode())
+        if size + item_size > max_size and chunk:
+            yield chunk
+            chunk, size = [], 0
+        chunk.append(item)
+        size += item_size
+    if chunk:
+        yield chunk
 
-def to_nanos(ts: str) -> str:
-    """Convert ISO8601 timestamp string to nanoseconds."""
-    dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-    return str(int(dt.timestamp() * 1e9))
-
-def split_large_entry(entry_str, max_size=MAX_LOKI_ENTRY):
-    """Split large log entry into chunks under Loki's 256KB limit."""
-    for i in range(0, len(entry_str), max_size):
-        yield entry_str[i:i+max_size]
-
-def convert_to_loki(data):
-    streams = []
-    timestamp = to_nanos(data.get("timestamp"))
-
-    for item in data.get("items", []):
-        labels = {
-            "category": data.get("category", "unknown"),
-            "id": item.get("id", "no-id"),
-            "type": item.get("type", "na"),
-            "tag": item.get("meta", {}).get("tag", "na"),
-            "status": item.get("meta", {}).get("status", "na"),
+def to_loki_payload(data):
+    category = data.get("category", "unknown")
+    timestamp = data.get("timestamp", str(int(time.time())))
+    items = data.get("items", [])
+    for i, chunk in enumerate(chunk_items(items)):
+        yield {
+            "streams": [
+                {
+                    "stream": {
+                        "category": category,
+                        "batch_id": str(i),
+                        "count": str(len(chunk))
+                    },
+                    "values": [
+                        [
+                            str(int(time.time() * 1e9)),  # nanoseconds
+                            json.dumps({"timestamp": timestamp, "items": chunk})
+                        ]
+                    ]
+                }
+            ]
         }
 
-        log_line = json.dumps({
-            "id": item.get("id"),
-            "path": item.get("meta", {}).get("path"),
-            "status": item.get("meta", {}).get("status"),
-            "owner": item.get("meta", {}).get("owner"),
-        }, ensure_ascii=False)
-
-        if len(log_line.encode("utf-8")) > MAX_LOKI_ENTRY:
-            for idx, chunk in enumerate(split_large_entry(log_line)):
-                streams.append({
-                    "stream": labels,
-                    "values": [[timestamp, f"[chunk {idx+1}] {chunk}"]]
-                })
-        else:
-            streams.append({
-                "stream": labels,
-                "values": [[timestamp, log_line]]
-            })
-
-    return {"streams": streams}
-
 def main():
-    args = parse_args()
-    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--in", dest="input", required=True, help="Input JSON file")
+    parser.add_argument("--out-dir", required=True, help="Output directory")
+    args = parser.parse_args()
 
-    with open(args.input, "r") as f:
+    with open(args.input) as f:
         data = json.load(f)
 
-    payload = convert_to_loki(data)
+    os.makedirs(args.out_dir, exist_ok=True)
 
-    with open(args.output, "w") as f:
-        json.dump(payload, f, indent=2)
-
-    print(f"[+] Loki payload written to {args.output}")
-    # Always keep full JSON for MongoDB (just reuse the original input)
-    mongo_copy = args.output.replace("_loki.json", "_mongo.json")
-    with open(mongo_copy, "w") as f:
-        json.dump(data, f, indent=2)
-    print(f"[+] Full JSON stored for MongoDB: {mongo_copy}")
+    base = os.path.basename(args.input).replace(".json", "")
+    for i, payload in enumerate(to_loki_payload(data)):
+        out_path = os.path.join(args.out_dir, f"{base}_loki_part{i}.json")
+        with open(out_path, "w") as f:
+            json.dump(payload, f, indent=2)
+        print(f"[+] Loki payload written: {out_path}")
 
 if __name__ == "__main__":
     main()

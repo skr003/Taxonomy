@@ -53,27 +53,27 @@ pipeline {
         stage('Push to Loki') {
             agent { label 'master' }             
             steps {
-                  sh """
+                  sh '''
                      for file in output/loki_logs/*.json; do
                         echo "[+] Pushing \$file to Loki..."
                           curl -s -X POST -H "Content-Type: application/json" \
                               --data-binary @\${file} \
                                 http://172.16.0.4:3100/loki/api/v1/push || true
                        done
-                       """
+                   '''
             }
         }
         stage('Push to MongoDB') {
             agent { label 'master' }             
             steps {
                 withCredentials([string(credentialsId: 'mongo-uri', variable: 'MONGO_URI')]) {
-                    sh """
+                    sh '''
                     python3 scripts/push_to_mongo.py \
                         --mongo-uri "$MONGO_URI" \
                         --db TaxonomyDB \
                         --collection Artifacts \
                         --in-dir output/mongo_logs
-                    """
+                    '''
                 }
             }
         }

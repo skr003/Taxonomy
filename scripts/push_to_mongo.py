@@ -3,30 +3,40 @@ import argparse
 import json
 import os
 from pymongo import MongoClient
+from bson import json_util
 
-def insert_file(coll, filepath, batch_size=1000):
+MAX_BSON_SIZE = 16 * 1024 * 1024  # 16MB
+
+def safe_insert(coll, doc, filename, idx):
+    """Ensure no single document exceeds BSON size limit"""
+    raw = json_util.dumps(doc).encode("utf-8")
+    if len(raw) < MAX_BSON_SIZE:
+        coll.insert_one(doc)
+        print(f"[+] Inserted single doc from {filename} (part {idx})")
+    else:
+        # If still too large, split arrays inside
+        if isinstance(doc, dict) and "items" in doc and isinstance(doc["items"], list):
+            items = doc["items"]
+            mid = len(items) // 2
+            left = {**doc, "items": items[:mid]}
+            right = {**doc, "items": items[mid:]}
+            safe_insert(coll, left, filename, f"{idx}.L")
+            safe_insert(coll, right, filename, f"{idx}.R")
+        else:
+            raise ValueError(
+                f"[!] Document from {filename} part {idx} is too large "
+                "and cannot be split automatically."
+            )
+
+def insert_file(coll, filepath):
     with open(filepath) as f:
         data = json.load(f)
 
-    # If data is a dict with "items"
-    if isinstance(data, dict) and "items" in data:
-        items = data["items"]
-        for i in range(0, len(items), batch_size):
-            chunk = items[i:i+batch_size]
-            coll.insert_many(chunk)
-            print(f"[+] Inserted {len(chunk)} docs from {os.path.basename(filepath)} (chunk {i//batch_size+1})")
-
-    # If data is already a list
-    elif isinstance(data, list):
-        for i in range(0, len(data), batch_size):
-            chunk = data[i:i+batch_size]
-            coll.insert_many(chunk)
-            print(f"[+] Inserted {len(chunk)} docs from {os.path.basename(filepath)} (chunk {i//batch_size+1})")
-
+    if isinstance(data, list):
+        for i, doc in enumerate(data):
+            safe_insert(coll, doc, filepath, i)
     else:
-        # Single JSON object, insert as one doc
-        coll.insert_one(data)
-        print(f"[+] Inserted 1 doc from {os.path.basename(filepath)}")
+        safe_insert(coll, data, filepath, 0)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -40,7 +50,6 @@ def main():
     db = client[args.db]
     coll = db[args.collection]
 
-    # Drop old collection before inserting new build
     coll.drop()
     print(f"[+] Dropped old collection {args.db}.{args.collection}")
 

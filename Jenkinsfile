@@ -37,6 +37,8 @@ pipeline {
         stage('Format Logs') {
             agent { label 'master' } 
             steps {
+                unstash 'artifacts'
+                archiveArtifacts artifacts: 'output/**', fingerprint: true  
                 sh """
                 mkdir -p output/loki_logs output/mongo_logs
                 for file in split_logs/*.json; do

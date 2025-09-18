@@ -39,14 +39,14 @@ pipeline {
             steps {
                 unstash 'artifacts'
                 archiveArtifacts artifacts: 'output/**', fingerprint: true  
-                sh """
+                sh '''
                 mkdir -p ${MASTER_WORKSPACE_DIR}/output/loki_logs ${MASTER_WORKSPACE_DIR}/output/mongo_logs
                 for file in ${MASTER_WORKSPACE_DIR}/output/split_logs/*.json; do
                     echo "[+] Processing $file"
                     python3 scripts/format_for_loki.py --in $file --out-dir output/loki_logs
                     python3 scripts/format_for_mongo.py --in $file --out-dir output/mongo_logs
                 done
-                """
+                '''
             }
         }
 

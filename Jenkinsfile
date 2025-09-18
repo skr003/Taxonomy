@@ -63,15 +63,15 @@ pipeline {
                 '''
             }
         }
-        stage('Store Metadata in MongoDB Atlas') {
-            agent { label 'master' }   
-            steps {
-                sh """
-                    echo "[+] Storing metadata into MongoDB Atlas"
-                    python3 scripts/store_metadata.py --mongo-uri "${MONGO_URI}" --in ${MASTER_WORKSPACE_DIR}/output/priority_list.json
-                """
-            }
-        }
+        // stage('Store Metadata in MongoDB Atlas') {
+        //     agent { label 'master' }   
+        //     steps {
+        //         sh """
+        //             echo "[+] Storing metadata into MongoDB Atlas"
+        //             python3 scripts/store_metadata.py --mongo-uri "${MONGO_URI}" --in ${MASTER_WORKSPACE_DIR}/output/priority_list.json
+        //         """
+        //     }
+        // }
         stage('Visualization') {
             agent { label 'master' }  
             steps {

@@ -1,25 +1,47 @@
 #!/usr/bin/env python3
-import os
-import json
 import argparse
+import json
+import os
+
+def extract_metadata(item, category, timestamp):
+    """Extract only metadata for MongoDB insertion (no full log content)."""
+    return {
+        "id": item.get("id"),
+        "type": item.get("type"),
+        "category": category,
+        "path": item.get("meta", {}).get("path"),
+        "tag": item.get("meta", {}).get("tag"),
+        "status": item.get("meta", {}).get("status"),
+        "timestamp": timestamp,
+        "description": item.get("meta", {}).get("explanation"),
+        "metadata": item.get("meta", {}).get("metadata", {}),
+    }
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--in", dest="input", required=True, help="Input JSON file")
-    parser.add_argument("--out-dir", required=True, help="Output directory")
+    parser = argparse.ArgumentParser(description="Format logs for MongoDB ingestion.")
+    parser.add_argument("--in", dest="input", required=True, help="Input JSON file (split log).")
+    parser.add_argument("--out", dest="output", required=True, help="Output *_mongo.json file.")
     args = parser.parse_args()
 
-    with open(args.input) as f:
+    # Read input file
+    with open(args.input, "r") as f:
         data = json.load(f)
 
-    os.makedirs(args.out_dir, exist_ok=True)
+    category = data.get("category")
+    timestamp = data.get("timestamp")
+    items = data.get("items", [])
 
-    base = os.path.basename(args.input).replace(".json", "")
-    out_path = os.path.join(args.out_dir, f"{base}_mongo.json")
-    with open(out_path, "w") as f:
-        json.dump(data, f, indent=2)
+    # Strip raw log entries and only keep metadata
+    mongo_ready = [extract_metadata(item, category, timestamp) for item in items]
 
-    print(f"[+] MongoDB JSON written: {out_path}")
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+
+    # Write mongo-formatted JSON
+    with open(args.output, "w") as f:
+        json.dump(mongo_ready, f, indent=2)
+
+    print(f"[+] MongoDB payload written to {args.output}")
 
 if __name__ == "__main__":
     main()

@@ -77,7 +77,6 @@ pipeline {
                 }
             }
         }
-#################################################################
         // stage('Format Logs for Loki and MongoDB') {
         //     agent { label 'master' }  
         //     steps {

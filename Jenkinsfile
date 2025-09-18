@@ -81,23 +81,23 @@ pipeline {
                 """
             }
         }
-    stage('Upload Reports to Azure Storage') {
-      agent { label 'master' }    
-      steps {
-            script {
-            withCredentials([
-                string(credentialsId: 'TAXONOMY_STORAGE_ACCOUNT_KEY', variable: 'TAXONOMY_STORAGE_ACCOUNT_KEY')
-                    ]) {
-                sh '''
-                # Set variables - REPLACE WITH YOUR ACTUAL STORAGE KEY
-                STORAGE_ACCOUNT="taxonomystorage123"
-                CONTAINER="reports"
-                az storage blob upload-batch --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "reports/builds/$BUILD_NUMBER" --source output --overwrite
-                az storage blob upload-batch --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "reports/latest" --source output --overwrite
-                '''
-            }  
-      }
-    }        
-    }
+    // stage('Upload Reports to Azure Storage') {
+    //   agent { label 'master' }    
+    //   steps {
+    //         script {
+    //         withCredentials([
+    //             string(credentialsId: 'TAXONOMY_STORAGE_ACCOUNT_KEY', variable: 'TAXONOMY_STORAGE_ACCOUNT_KEY')
+    //                 ]) {
+    //             sh '''
+    //             # Set variables - REPLACE WITH YOUR ACTUAL STORAGE KEY
+    //             STORAGE_ACCOUNT="taxonomystorage123"
+    //             CONTAINER="reports"
+    //             az storage blob upload-batch --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "reports/builds/$BUILD_NUMBER" --source output --overwrite
+    //             az storage blob upload-batch --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "reports/latest" --source output --overwrite
+    //             '''
+    //         }  
+    //   }
+    // }        
+    // }
   }
 }

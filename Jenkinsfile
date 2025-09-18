@@ -7,7 +7,6 @@ pipeline {
     GRAFANA_FORENSIC_DIR = "/var/lib/grafana/forensic"
     FORENSIC_AGENT = "/home/jenkins/forensic/collect_agent.py"
     LOKI_URL = "http://172.16.0.4:3100/loki/api/v1/push"
-    MONGO_URI = credentials('mongo-atlas-secret') // Jenkins credential ID
     }
   stages {
     stage('Deploy Agent Script & Collect Logs') {
@@ -40,7 +39,7 @@ pipeline {
                 unstash 'artifacts'
                 archiveArtifacts artifacts: 'output/**', fingerprint: true  
                 sh '''
-                mkdir -p ${MASTER_WORKSPACE_DIR}/output/loki_logs ${MASTER_WORKSPACE_DIR}/output/mongo_logs
+                mkdir -p ${MASTER_WORKSPACE_DIR}/output/loki_logs
                 for file in ${MASTER_WORKSPACE_DIR}/output/split_logs/*.json; do
                     echo "[+] Processing $file"
                     python3 scripts/format_for_loki.py --in $file --out-dir output/loki_logs

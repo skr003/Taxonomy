@@ -63,16 +63,16 @@ pipeline {
                    '''
             }
         }
-        stage('Push to MongoDB') {
-            agent { label 'master' }             
-            steps {
-                withCredentials([string(credentialsId: 'mongo-atlas-secret', variable: 'MONGO_URI')]) {
-                    sh '''
-                    python3 scripts/push_to_mongo.py --in-dir output/mongo_logs --mongo-uri $MONGO_URI --db TaxonomyDB --collection Artifacts
-                    '''
-                }
-            }
-        }
+        // stage('Push to MongoDB') {
+        //     agent { label 'master' }             
+        //     steps {
+        //         withCredentials([string(credentialsId: 'mongo-atlas-secret', variable: 'MONGO_URI')]) {
+        //             sh '''
+        //             python3 scripts/push_to_mongo.py --in-dir output/mongo_logs --mongo-uri $MONGO_URI --db TaxonomyDB --collection Artifacts
+        //             '''
+        //         }
+        //     }
+        // }
         stage('Visualization') {
             agent { label 'master' }  
             steps {
@@ -82,23 +82,23 @@ pipeline {
                 """
             }
         }
-    // stage('Upload Reports to Azure Storage') {
-    //   agent { label 'master' }    
-    //   steps {
-    //         script {
-    //         withCredentials([
-    //             string(credentialsId: 'TAXONOMY_STORAGE_ACCOUNT_KEY', variable: 'TAXONOMY_STORAGE_ACCOUNT_KEY')
-    //                 ]) {
-    //             sh '''
-    //             # Set variables - REPLACE WITH YOUR ACTUAL STORAGE KEY
-    //             STORAGE_ACCOUNT="taxonomystorage123"
-    //             CONTAINER="reports"
-    //             az storage blob upload-batch --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "reports/builds/$BUILD_NUMBER" --source output --overwrite
-    //             az storage blob upload-batch --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "reports/latest" --source output --overwrite
-    //             '''
-    //         }  
-    //   }
-    // }        
-    // }
+    stage('Upload Reports to Azure Storage') {
+      agent { label 'master' }    
+      steps {
+            script {
+            withCredentials([
+                string(credentialsId: 'TAXONOMY_STORAGE_ACCOUNT_KEY', variable: 'TAXONOMY_STORAGE_ACCOUNT_KEY')
+                    ]) {
+                sh '''
+                # Set variables - REPLACE WITH YOUR ACTUAL STORAGE KEY
+                STORAGE_ACCOUNT="taxonomystorage123"
+                CONTAINER="reports"
+                az storage blob upload-batch --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "reports/builds/$BUILD_NUMBER" --source output --overwrite
+                az storage blob upload-batch --account-name $STORAGE_ACCOUNT --account-key "$TAXONOMY_STORAGE_ACCOUNT_KEY" --destination "reports/latest" --source output --overwrite
+                '''
+            }  
+      }
+    }        
+    }
   }
 }

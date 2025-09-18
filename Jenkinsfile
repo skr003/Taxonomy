@@ -53,6 +53,7 @@ pipeline {
             }
         }
         stage('Push Logs to Loki') {
+            agent { label 'master' }              
             steps {
                  sh '''
                       for f in ${WORKSPACE}/output/loki_logs/*_loki.json; do

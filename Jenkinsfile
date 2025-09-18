@@ -41,7 +41,7 @@ pipeline {
                 archiveArtifacts artifacts: 'output/**', fingerprint: true  
                 sh """
                 mkdir -p output/loki_logs output/mongo_logs
-                #for file in split_logs/*.json; do
+                #for file in output/split_logs/*.json; do
                 #    echo "[+] Processing $file"
                 #    python3 scripts/format_for_loki.py --in $file --out-dir output/loki_logs
                 #    python3 scripts/format_for_mongo.py --in $file --out-dir output/mongo_logs
